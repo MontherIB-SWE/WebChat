@@ -1,0 +1,180 @@
+body {
+    font-family: sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #000000; /* Light gray background */
+    color: #d5d5d5; /* Dark text color */
+}
+
+h1 {
+    text-align: center;
+    padding: 20px 0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+#friends-display {
+    list-style: none; /* Remove default list item bullets */
+    padding: 0;       /* Remove default padding */
+    /*display: flex;*/
+    flex-wrap: wrap;    /* Allow items to wrap to the next line if needed */
+    justify-content: space-evenly; 
+    color: #000000;
+  }
+  
+  #friends-display li {
+    background-color: #f0f0f0; /* Light gray background for the box */
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin: 10px;         /* Add some margin between the boxes */
+    font-weight: bold;
+    cursor: pointer;
+    text-align: center;
+  }
+
+
+.container {
+    background-color: #222222;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    max-width: 800px; /* Limit the width on larger screens */
+    width: 80%; /* Take up most of the screen width on smaller screens */
+    height: auto;
+  }
+  
+p {
+    font-size: 18px;
+    line-height: 1.6;
+}
+input[type='text']{
+width: 70%;
+height: 100px;
+
+}
+input::placeholder {
+    text-align: center; /* Center the placeholder text */
+    color: gray;        /* Change the color */
+    font-style: italic;  /* Make it italic */
+  }
+button{
+    background-color: #025815; /* Example primary color */
+    color: #fff;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  
+  #message-container {
+    display: none; /* Initially hidden */
+    position: fixed; /* Position it relative to the viewport */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center it */
+    background-color: #222222;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Add a subtle shadow */
+    z-index: 10; /* Ensure it's on top of other elements */
+}
+#chat-messages {
+  display: flex;
+  flex-direction: column; /* Arrange messages in a vertical column */
+  color: #000000;
+  flex-grow: 1; /* Allow chat messages to take up available space */
+    overflow-y: auto; 
+    max-height: 80%; /* Or adjust to your desired height */
+    flex-shrink: 0; 
+}
+.message {
+
+  margin-bottom: 10px; /* Add some spacing between messages */
+  margin-right: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  max-width: 90%; /* Limit the width of messages */
+}
+
+/* Style for sent messages (right-aligned) */
+.message.sent {
+
+  background-color: #dcf8c6; /* Light green background */
+  margin-left: auto;
+  text-align: right;
+}
+
+/* Style for received messages (left-aligned) */
+.message:not(.sent) { /* Target all messages that are NOT .sent */
+  background-color: #ffffff; /* White background */
+  margin-right: auto;
+}
+#convo{
+    display: none; /* Initially hidden */
+    position: fixed; /* Position it relative to the viewport */
+    margin-top: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%); /* Center it */
+    background-color: #222222;
+    padding: 20px;
+    border-radius: 20px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3); /* Add a subtle shadow */
+    z-index: 10; /* Ensure it's on top of other elements */
+    flex-direction: column;
+    height: 80%;
+}
+#overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+    backdrop-filter: blur(5px); /* Apply blur effect */
+    z-index: 7; /* Place it below the message container */
+
+}
+
+#overlay1 {
+    display: none; /* Initially hidden */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black overlay */
+    backdrop-filter: blur(5px); /* Apply blur effect */
+    z-index: 9;
+}
+input::placeholder {
+  color: #999; 
+  font-style: normal;
+  text-align: center; 
+  font-size: 16px;
+  font-weight: 300; /* Slightly lighter font weight */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+  opacity: 0.8; /* Slightly transparent */
+}
+.side-panel {
+    height: 100%;
+    width: 400px; /* Adjust width as needed */
+    position: fixed;
+    top: 0;
+    right: 0;
+    background-color:#222222; /* Adjust color as needed */
+    padding-top: 20px;
+    z-index: 8;
+    transform: translateX(200%); /* Initially hidden offscreen */
+    transition: transform 0.9s cubic-bezier(0.075, 0.82, 0.165, 1);
+    display: flex; /* Use flexbox for easy alignment */
+    flex-direction: column; /* Arrange items vertically */
+    align-items:center; /* Center items horizontally */
+    justify-content:start;
+    max-height: 100vh;
+  }
+  .side-panel.open {
+    transform: translateX(0); /* Slide in from the left */
+  }
+  

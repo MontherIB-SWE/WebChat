@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <body style="font-family: sans-serif;"></body>
+  <link rel="stylesheet" href="style-home.css">
+</head>
+
+<body>
+
+    <div id="overlay1" style="display: none;"></div> 
+    <div class="side-panel" id="panel" >
+        <button id="pclose" style="font-weight: bold;width: 300px;">Close >></button><br>
+        <button id="add-friends-button" type="button" style="width: 300px;">Add Friends</button><br>
+        <button id="logout" style="background-color: rgb(130, 0, 0);width: 300px;position: absolute;bottom: 40px;">Logout</button>
+    </div>
+        
+    <div id="overlay" style="display: none;"></div> 
+
+    <div style="display: flex; justify-content: space-around; align-items: center;">
+        
+        <h1 style="text-align: center;">Welcome, <span id="username-display"></span>!</h1> 
+            <button id="popen" style="font-weight: bold;font-size: large;">| | |</button>
+
+    </div>
+
+    <div class="grid-container" style="display: grid; place-items: center;"> 
+        <div class="container" style="margin: 0 auto;"> 
+            <h2>Friends list:</h2>
+            <ul id="friends-display" style="font-weight: bold;"></ul> <span id="no-friends-message"></span>
+
+        </div>
+    </div>
+
+    
+    <div class="container" id="message-container" style="margin: 0 auto; display: none; width: 400px;height: 100px;">
+        <div id="Message" >
+            <form>
+                <br>
+                <div style="display: flex; justify-content: center;">
+                    <label for="username" style="margin-right: 20px;">Username:</label>
+                    <input type="username" id="username" name="username" required autocomplete="username">
+                </div><br>
+
+                <div style="display: flex ;justify-content: space-around;">
+                    <button id="add">add</button>
+                    <button id="close">close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="container" id="convo">
+        <button id="exit-button" style="background-color: red; align-self: flex-end;">X</button>
+        <ol id="chat-messages"></ol> 
+        
+        <div style="display: flex;justify-content: center;">
+          <input id="message" type="text" style="height: 30px;border-radius: 20px;width: 80%;" placeholder="enter message">
+          <button id="send" style="border-radius: 20px">send</button>
+        </div>
+      </div>
+
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/uuid/8.3.2/uuidv4.min.js"></script>    
+      
+      <script>
+let uniqueKey = uuidv4();  // Generate a unique key using uuidv4
+let currentUsername = '';
+let targetUser = '';
+
+document.addEventListener('DOMContentLoaded', () => {
+    const username = sessionStorage.getItem('username');
+    const token = sessionStorage.getItem('token');
+
+    if (!username || !token) {
+        window.location.href = 'index.html';
+    } else {
+        currentUsername = username;
+        document.getElementById('username-display').textContent = username;
+        loadFriendsList(username);
+    }
+});
+       
+       
+        const friends = localStorage.getItem('friends');
+
+        function loadFriendsList(currentUsername) {
+    fetch(`/get-friends?username=${currentUsername}`) // Pass the username as a query parameter
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to fetch friends list');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const friendsList = data.friendsList || [];
+            const friendsDisplay = document.getElementById('friends-display');
+            const noFriendsMessage = document.getElementById('no-friends-message');
+
+            if (friendsList.length > 0) {
+                // Display the friends list
+                friendsList.forEach(friend => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = friend;
+                    friendsDisplay.appendChild(listItem);
+                });
+                noFriendsMessage.style.display = 'none';
+            } else {
+                // Show the "no friends" message
+                noFriendsMessage.textContent = "You have no friends yet.";
+                friendsDisplay.style.display = 'none';
+            }
+        })
+        .catch(error => {
+            console.error('Error loading friends:', error);
+        });
+}
+
+
+        const addfriendsbutton = document.getElementById('add-friends-button');
+        const messageContainer = document.getElementById('message-container');
+        const overlay = document.getElementById('overlay');
+        const closeButton = document.getElementById('close');
+        const addButton = document.getElementById('add');
+        const panel = document.getElementById('panel');
+        const popen = document.getElementById('popen');
+        const pclose = document.getElementById('pclose');
+        const overlay1 = document.getElementById('overlay1');
+        const logout = document.getElementById('logout');
+        const exitB=document.getElementById('exit-button');
+        const friendsDisplay = document.getElementById('friends-display');
+        const convoContainer = document.getElementById('convo');
+        const chatMessagesContainer = document.getElementById('chat-messages'); // Get the chat messages container
+        const sendB = document.getElementById('send'); // Get the chat form
+        const messageInput = document.getElementById('message'); // Get the message input field
+
+        sendB.addEventListener('click', (event) => {
+            event.preventDefault(); // Prevent default form submission behavior
+    
+            const messageContent = messageInput.value.trim(); // Get the message content and trim whitespace
+    
+            if (messageContent === '') return; // Don't send empty messages
+                console.log(currentUsername,messageContent,targetUser)
+                // Send the message to the server
+                fetch('/send-message', { // Adjust the endpoint as needed
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        sender: currentUsername, 
+                        recipient: targetUser, 
+                        content: messageContent 
+                    })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to send message');
+                    }
+                    // Optionally, handle successful message sending (e.g., clear the input field, 
+                    // update the chat history if not using real-time updates)
+                    messageInput.value = ''; 
+                    //addNewMessageToChat(currentUsername, messageContent);
+                })
+                .catch(error => {
+                    console.error('Error sending message:', error);
+                });
+        });
+
+        function addNewMessageToChat(sender, content) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            if (sender === currentUsername) {
+                messageElement.classList.add('sent');
+            }
+
+            const senderElement = document.createElement('strong');
+            senderElement.textContent = sender + ': ';
+
+            const contentElement = document.createElement('p');
+            contentElement.textContent = content;
+
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);
+
+            chatMessagesContainer.appendChild(messageElement);   
+
+
+            // Scroll to the bottom
+            chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+        }
+
+        exitB.addEventListener('click',()=>{
+            chatMessagesContainer.style.display='none';
+            overlay.style.display='none'
+            convoContainer.style.display='none'
+
+            chatMessagesContainer.innerHTML=''
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            
+        })
+
+        friendsDisplay.addEventListener('click', (event) => {
+    const clickedElement = event.target;
+
+    if (clickedElement.tagName === 'LI') {
+        targetUser = clickedElement.textContent;
+
+        fetch(`/chat?currentUser=${currentUsername}&targetUser=${targetUser}`)
+            .then(response => response.json())
+            .then(data => {
+                chatMessagesContainer.style.display = 'flex';
+                overlay.style.display = 'block';
+                convoContainer.style.display = 'flex';
+                chatMessagesContainer.innerHTML = '';
+
+                data.chatHistory.forEach(message => {
+                    try {
+                        const messageElement = document.createElement('div');
+                        messageElement.classList.add('message');
+                        if (message.sender === currentUsername) {
+                            messageElement.classList.add('sent');
+                        }
+
+                        const senderElement = document.createElement('strong');
+                        senderElement.textContent = message.sender + ': ';
+
+                        const contentElement = document.createElement('p');
+                        contentElement.textContent = message.content;
+
+                        messageElement.appendChild(senderElement);
+                        messageElement.appendChild(contentElement);
+
+                        chatMessagesContainer.appendChild(messageElement);
+                    } catch (error) {
+                        console.error('Error processing message:', error);
+                    }
+                });
+
+                // Start the EventSource connection for real-time updates
+                const eventSource = new EventSource(`/chat-updates?currentUser=${currentUsername}&targetUser=${targetUser}&uniqueKey=${uniqueKey}`);
+
+                eventSource.onmessage = (event) => {
+                    const newMessages = JSON.parse(event.data);
+                    updateChatHistory(newMessages);
+                };
+
+                eventSource.onerror = (error) => {
+                    console.error('Error with SSE connection:', error);
+                };
+
+            })
+            .catch(error => {
+                console.error('Error fetching chat:', error);
+            });
+    }
+});
+
+        function updateChatHistory(newMessages) {
+        // 1. Get the last message currently displayed (if any)
+        const lastMessageElement = chatMessagesContainer.lastElementChild;
+        const lastMessageId = lastMessageElement ? lastMessageElement.dataset.messageId : null; 
+
+        // 2. Filter new messages based on the last message ID
+        const messagesToAdd = newMessages.filter(message => {
+            return !lastMessageId || parseInt(message.id) > parseInt(lastMessageId); 
+        });
+
+        // 3. Append only the new messages to the chat container
+        messagesToAdd.forEach(message => {
+            try {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.dataset.messageId = message.id; // Store the message ID for future filtering
+
+            if (message.sender === currentUsername) {
+                messageElement.classList.add('sent');
+            }
+
+            const senderElement = document.createElement('strong');
+            senderElement.textContent = message.sender + ': ';
+
+            const contentElement = document.createElement('p');
+            contentElement.textContent = message.content;
+
+            messageElement.appendChild(senderElement);
+            messageElement.appendChild(contentElement);   
+
+
+            chatMessagesContainer.appendChild(messageElement);
+            } catch (error) {
+            console.error('Error processing message:', error);
+            }
+        });
+
+        // 4. Scroll to the bottom if new messages were added
+            if (messagesToAdd.length > 0) {
+                chatMessagesContainer.scrollTop = chatMessagesContainer.scrollHeight;
+            }
+        }
+
+
+        popen.addEventListener('click', () => {
+            panel.classList.add('open'); 
+            overlay.style.display='block'
+
+        });
+
+        pclose.addEventListener('click', () => {
+            panel.classList.remove('open'); 
+
+            overlay.style.display='none'
+
+        });
+
+        logout.addEventListener('click',()=>{
+            sessionStorage.clear();
+            
+            // Optionally, also clear server-side session (if applicable)
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                'Authorization': `Bearer ${sessionStorage.getItem('token')}`
+                }
+            }).then(() => {
+                window.location.href = 'index.html';
+            }).catch(error => {
+                console.error('Logout failed:', error);
+            });
+
+        })
+        
+
+        addButton.addEventListener('click', () => {
+            const userToAdd = document.getElementById('username').value; // Get the value from the input field
+            const currentUsername = document.getElementById('username-display').textContent; // Get the current user's name
+            
+            if (!userToAdd) {
+                alert('Please enter a username to add.');
+                return;
+            }
+
+    
+            fetch('/add-friend', { 
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ currentUsername, userToAdd })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.text(); 
+                } else {
+                    throw new Error('Failed to add friend');
+                }
+            })
+            .then(data => {
+                alert(data); 
+            
+            })
+            .catch(error => {
+                alert(error.message);
+            });
+    
+        });
+
+        addfriendsbutton.addEventListener('click', () => {
+        
+            if (messageContainer.style.display === 'none') {
+                messageContainer.style.display = 'block';
+                overlay1.style.display='block'
+            } 
+        });
+
+        closeButton.addEventListener('click',()=>{
+            if(messageContainer.style.display==='block'){
+                messageContainer.style.display = 'none';
+                overlay1.style.display='none'
+            }
+        });
+
+        
+    </script>
+
+</body>
+</html>
