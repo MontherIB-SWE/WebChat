@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Chess</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background-color: #1d1f21;
+      color: #eee;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background: #2c2c2c;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.5);
+    }
+    #header h1 {
+      margin: 0;
+      font-size: 1.5rem;
+    }
+    #control-buttons {
+      display: flex;
+      gap: 6px;
+    }
+    #control-buttons button {
+      padding: 6px 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #025815;
+      color: #fff;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    #control-buttons button:hover {
+      background-color: #037c1e;
+      transform: scale(1.05);
+    }
+
+    #main-content {
+      display: flex;
+      height: calc(100% - 60px);
+    }
+
+    #board-container {
+      display: inline-block;
+      background: #2c2c2c;
+      padding: 10px;
+      border-radius: 5px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+      margin: 10px;
+    }
+
+    #board {
+      border: none;
+    }
+    table {
+      border-collapse: collapse;
+      margin: auto;
+    }
+    td {
+      width: 60px;
+      height: 60px;
+      text-align: center;
+      vertical-align: middle;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s, box-shadow 0.15s;
+      font-size: 36px;
+      color: inherit;
+    }
+    td:hover {
+      transform: scale(1.06);
+      box-shadow: 0 0 3px #fff;
+    }
+    .light { background-color: #f0d9b5; }
+    .dark { background-color: #b58863; }
+    .white-piece { color: #fff !important; }
+    .black-piece { color: #000 !important; }
+    .selected { outline: 2px solid #ff0; }
+    .valid-move { background-color: rgba(255, 255, 0, 0.4); }
+
+    #side-panel {
+      display: flex;
+      flex-direction: column;
+      width: 250px;
+      margin: 10px;
+      background: #2c2c2c;
+      border-radius: 5px;
+      box-shadow: 0 0 8px rgba(0,0,0,0.5);
+      padding: 10px;
+      box-sizing: border-box;
+    }
+    #side-panel-content {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    #player-info {
+      margin-bottom: 10px;
+      font-weight: bold;
+      font-size: 16px;
+    }
+    #status {
+      margin-bottom: 10px;
+      font-size: 16px;
+    }
+    #move-history {
+      background: #222;
+      padding: 10px;
+      border-radius: 3px;
+      font-size: 14px;
+      overflow-y: auto;
+      max-height: 300px;
+    }
+    #move-history ol {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 600px) {
+      td {
+        width: 40px;
+        height: 40px;
+        font-size: 24px;
+      }
+      #board-container {
+        padding: 5px;
+      }
+      #header h1 {
+        font-size: 1.2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header (Title + Buttons) -->
+  <div id="header">
+    <h1>Chess</h1>
+    <div id="control-buttons">
+      <button id="resetBtn">Reset</button>
+    </div>
+  </div>
+
+  <!-- Main area: board + side panel -->
+  <div id="main-content">
+    <div id="board-container">
+      <div id="board"></div>
+    </div>
+
+    <div id="side-panel">
+      <div id="side-panel-content">
+        <div id="player-info"></div>
+        <div id="status"></div>
+        <div id="move-history"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase + Chess.js -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
+
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyAfIXmgq8FAXC4nQeErSCkEqn7vBbFCh_E",
+      authDomain: "webchat-1185b.firebaseapp.com",
+      projectId: "webchat-1185b",
+      storageBucket: "webchat-1185b.firebasestorage.app",
+      messagingSenderId: "278191013540",
+      appId: "1:278191013540:web:124f7fd4803ad2208e3031",
+      measurementId: "G-J3YX8ETG88"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    const chessRef = db.collection("chessGames").doc(sessionStorage.getItem("roomId"));
+    let myColor = sessionStorage.getItem("myColor");
+    console.log("[Debug] roomId:", sessionStorage.getItem("roomId"), "myColor:", myColor);
+    if (!sessionStorage.getItem("roomId") || !myColor) {
+      alert("No roomId / myColor in session. Redirecting...");
+      window.location.href = "homescreen.html";
+      throw new Error("Missing roomId or myColor in session storage.");
+    }
+
+    const pieceSymbols = {
+      'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
+      'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
+    };
+
+    let game = new Chess();
+    let selectedSquare = null;
+
+    function drawBoard() {
+      console.log("[Debug] drawBoard()");
+      const boardDiv = document.getElementById('board');
+      boardDiv.innerHTML = '';
+      const table = document.createElement('table');
+
+      const ranks = [8,7,6,5,4,3,2,1];
+      for (let i = 0; i < 8; i++) {
+        const row = document.createElement('tr');
+        const rank = ranks[i];
+        const files = ['a','b','c','d','e','f','g','h'];
+        for (let j = 0; j < 8; j++) {
+          const fileChar = files[j];
+          const square = fileChar + rank;
+          const cell = document.createElement('td');
+          cell.id = square;
+          const isLight = (rank + j) % 2 === 0;
+          cell.className = isLight ? 'light' : 'dark';
+          cell.addEventListener('click', () => onSquareClick(square));
+          row.appendChild(cell);
+        }
+        table.appendChild(row);
+      }
+      boardDiv.appendChild(table);
+    }
+
+    function updateBoard() {
+      console.log("[Debug] updateBoard()");
+      const fen = game.fen().split(' ')[0];
+      const rows = fen.split('/');
+      const rankOrder = [8,7,6,5,4,3,2,1];
+      let rankIndex = 0;
+      for (const rowFen of rows) {
+        let fileCount = 0;
+        const currentRank = rankOrder[rankIndex];
+        const fileOrder = ['a','b','c','d','e','f','g','h'];
+        for (const char of rowFen) {
+          if (!isNaN(char)) {
+            fileCount += parseInt(char);
+          } else {
+            const fileChar = fileOrder[fileCount];
+            const square = fileChar + currentRank;
+            const cell = document.getElementById(square);
+            cell.textContent = '';
+            cell.classList.remove('white-piece','black-piece');
+            cell.textContent = pieceSymbols[char] || '';
+            const pieceObj = game.get(square);
+            if (pieceObj) {
+              if (pieceObj.color === 'w') {
+                cell.classList.add('white-piece');
+              } else {
+                cell.classList.add('black-piece');
+              }
+            }
+            fileCount++;
+          }
+        }
+        rankIndex++;
+      }
+      for (const rank of rankOrder) {
+        for (const fileChar of ['a','b','c','d','e','f','g','h']) {
+          const square = fileChar + rank;
+          if (!game.get(square)) {
+            const cell = document.getElementById(square);
+            cell.textContent = '';
+            cell.classList.remove('white-piece','black-piece');
+          }
+        }
+      }
+    }
+
+    function updateStatus() {
+      const turn = game.turn();
+      let status = '';
+      const moveColor = (turn === 'w') ? 'White' : 'Black';
+      if (game.in_checkmate()) {
+        status = `Game Over — ${moveColor} is checkmated`;
+      } else if (game.in_draw()) {
+        status = 'Game Over — Draw';
+      } else {
+        status = `${moveColor} to move`;
+        if (game.in_check()) status += ' (in check)';
+      }
+      document.getElementById('status').textContent = status;
+    }
+
+    function updateMoveHistory() {
+      const history = game.history();
+      let html = '<ol>';
+      history.forEach(move => {
+        html += `<li>${move}</li>`;
+      });
+      html += '</ol>';
+      document.getElementById('move-history').innerHTML = html;
+      console.log("[Debug] Move history updated:", history);
+    }
+
+    function removeHighlights() {
+      document.querySelectorAll('.selected').forEach(cell => cell.classList.remove('selected'));
+      document.querySelectorAll('.valid-move').forEach(cell => cell.classList.remove('valid-move'));
+    }
+
+    function canSelectPiece(piece) {
+      if (!piece) return false;
+      if (game.turn() === 'w' && myColor === 'white' && piece.color === 'w') return true;
+      if (game.turn() === 'b' && myColor === 'black' && piece.color === 'b') return true;
+      return false;
+    }
+
+    function onSquareClick(square) {
+      console.log("[Debug] onSquareClick ->", square);
+      const piece = game.get(square);
+      if (!selectedSquare) {
+        if (canSelectPiece(piece)) {
+          selectedSquare = square;
+          removeHighlights();
+          document.getElementById(square).classList.add('selected');
+          highlightMovesFrom(square);
+        }
+      } else {
+        console.log("[Debug] Attempting move from", selectedSquare, "to", square);
+        const move = game.move({
+          from: selectedSquare,
+          to: square,
+          promotion: 'q'
+        });
+        removeHighlights();
+        selectedSquare = null;
+        if (!move) {
+          console.log("[Debug] Illegal move, reverting board");
+          updateBoard();
+          return;
+        }
+        console.log("[Debug] Move made:", move);
+        chessRef.update({
+          fen: game.fen(),
+          pgn: game.pgn(),
+          lastMove: firebase.firestore.FieldValue.serverTimestamp()
+        });
+      }
+    }
+
+    function highlightMovesFrom(square) {
+      console.log("[Debug] highlightMovesFrom ->", square);
+      const moves = game.moves({ square, verbose: true });
+      moves.forEach(m => {
+        const cell = document.getElementById(m.to);
+        if (cell) cell.classList.add('valid-move');
+      });
+    }
+
+    function resetGameInFirestore() {
+      console.log("[Debug] resetGameInFirestore()");
+      const newGame = new Chess();
+      chessRef.set({
+        fen: newGame.fen(),
+        pgn: newGame.pgn(),
+        lastMove: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+
+    chessRef.onSnapshot(doc => {
+      if (!doc.exists) {
+        console.log("[Debug] No doc found, creating new game...");
+        resetGameInFirestore();
+        return;
+      }
+      const data = doc.data();
+      if (!data.fen && !data.pgn) {
+        console.log("[Debug] No fen/pgn in doc, resetting...");
+        resetGameInFirestore();
+        return;
+      }
+      console.log("[Debug] onSnapshot doc data:", data);
+      if (data.pgn) {
+        game.reset();
+        const success = game.load_pgn(data.pgn);
+        console.log("[Debug] game.load_pgn => success:", success);
+      } else {
+        game.load(data.fen);
+      }
+      updateBoard();
+      updateStatus();
+      updateMoveHistory();
+      document.getElementById('player-info').textContent = `You are playing as: ${myColor}`;
+    });
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+      if ((myColor === 'white' && game.turn() === 'w') ||
+          (myColor === 'black' && game.turn() === 'b')) {
+        resetGameInFirestore();
+      } else {
+        console.log("[Debug] Reset not allowed (not your turn).");
+      }
+    });
+
+    drawBoard();
+    updateBoard();
+    updateStatus();
+    updateMoveHistory();
+  </script>
+</body>
+</html>

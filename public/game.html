@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Game Lobby</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Optionally use your home stylesheet -->
+  <link rel="stylesheet" href="style-home.css">
+  <style>
+    /* Additional styles for the game lobby */
+    #game-lobby {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background-color: #111;
+      color: #eee;
+    }
+    #game-lobby h1 {
+      margin-bottom: 20px;
+      font-size: 2em;
+    }
+    #game-lobby p {
+      font-size: 18px;
+      margin-bottom: 20px;
+    }
+    #start-game-btn, #exit-game {
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 3px;
+      background-color: #025815;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      margin: 10px;
+    }
+    #start-game-btn:hover, #exit-game:hover {
+      background-color: #037c1e;
+    }
+  </style>
+</head>
+<body>
+  <div id="game-lobby">
+    <h1>Game Lobby</h1>
+    <p id="status-text">Waiting for players...</p>
+    <!-- Only host sees this button -->
+    <button id="start-game-btn" style="display:none;">Start Game</button>
+    <button id="exit-game">Exit Lobby</button>
+  </div>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyAfIXmgq8FAXC4nQeErSCkEqn7vBbFCh_E",
+      authDomain: "webchat-1185b.firebaseapp.com",
+      projectId: "webchat-1185b",
+      storageBucket: "webchat-1185b.firebasestorage.app",
+      messagingSenderId: "278191013540",
+      appId: "1:278191013540:web:124f7fd4803ad2208e3031",
+      measurementId: "G-J3YX8ETG88"
+    };
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+    const db = firebase.firestore();
+
+    // Retrieve username and roomId from sessionStorage.
+    const currentUsername = sessionStorage.getItem("username") || "player1";
+    const roomId = sessionStorage.getItem("roomId") || "demoRoom";
+    let isHost = false;
+
+    // Reference to the shared game room document in Firestore.
+    const gameRef = db.collection("games").doc(roomId);
+
+    // Step 1: Create or fetch the game room document.
+    gameRef.get().then(doc => {
+      if (!doc.exists) {
+        // Create the game room document and assign current user as host.
+        gameRef.set({
+          leftPaddleY: 160,  // based on canvas height = 400 and paddleHeight = 80
+          rightPaddleY: 160,
+          ballX: 400,
+          ballY: 200,
+          ballDX: 4,
+          ballDY: 2,
+          scoreLeft: 0,
+          scoreRight: 0,
+          host: currentUsername,
+          gameStarted: false, // Game has not started yet.
+          lastUpdate: firebase.firestore.FieldValue.serverTimestamp()
+        })
+        .then(() => {
+          isHost = true;
+          sessionStorage.setItem("isHost", "true");
+          document.getElementById("status-text").textContent = "You are the host. Click 'Start Game' when ready.";
+          document.getElementById("start-game-btn").style.display = "block";
+        })
+        .catch(err => console.error("Error creating game room:", err));
+      } else {
+        // Document exists—load game room state.
+        const data = doc.data();
+        isHost = (data.host === currentUsername);
+        sessionStorage.setItem("isHost", isHost ? "true" : "false");
+        document.getElementById("status-text").textContent = isHost ?
+          "You are the host. Click 'Start Game' when ready." :
+          "Waiting for host to start the game...";
+      }
+    });
+
+    // Step 2: Listen for game start signal.
+    gameRef.onSnapshot(doc => {
+      const data = doc.data();
+      if (data && data.gameStarted === true) {
+        // When gameStarted is true, redirect both players to the game page.
+        window.location.href = "pingpong_game.html";
+      }
+    });
+
+    // If host clicks "Start Game", update the document.
+    document.getElementById("start-game-btn").addEventListener("click", () => {
+      if (isHost) {
+        gameRef.update({ gameStarted: true })
+          .then(() => console.log("Game started!"))
+          .catch(err => console.error("Error starting game:", err));
+      }
+    });
+
+    // Exit Lobby button: return to homescreen (or another page).
+    document.getElementById("exit-game").addEventListener("click", () => {
+      window.location.href = "homescreen.html";
+    });
+  </script>
+</body>
+</html>
