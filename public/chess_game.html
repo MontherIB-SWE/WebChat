@@ -14,7 +14,7 @@
       font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
     }
-
+    /* Header */
     #header {
       display: flex;
       align-items: center;
@@ -45,12 +45,12 @@
       background-color: #037c1e;
       transform: scale(1.05);
     }
-
+    /* Main content layout */
     #main-content {
       display: flex;
       height: calc(100% - 60px);
     }
-
+    /* Board container */
     #board-container {
       display: inline-block;
       background: #2c2c2c;
@@ -59,7 +59,7 @@
       box-shadow: 0 0 8px rgba(0,0,0,0.5);
       margin: 10px;
     }
-
+    /* Board table */
     #board {
       border: none;
     }
@@ -88,7 +88,7 @@
     .black-piece { color: #000 !important; }
     .selected { outline: 2px solid #ff0; }
     .valid-move { background-color: rgba(255, 255, 0, 0.4); }
-
+    /* Side panel */
     #side-panel {
       display: flex;
       flex-direction: column;
@@ -127,16 +127,20 @@
       margin: 0;
       padding-left: 20px;
     }
-
-    /* Mobile adjustments */
+    /* Mobile adjustments: stack board and side-panel vertically */
     @media (max-width: 600px) {
+      #main-content {
+        flex-direction: column;
+        overflow-y: auto;
+      }
+      #board-container, #side-panel {
+        width: 90%;
+        margin: 10px auto;
+      }
       td {
         width: 40px;
         height: 40px;
         font-size: 24px;
-      }
-      #board-container {
-        padding: 5px;
       }
       #header h1 {
         font-size: 1.2rem;
@@ -152,13 +156,12 @@
       <button id="resetBtn">Reset</button>
     </div>
   </div>
-
+  
   <!-- Main area: board + side panel -->
   <div id="main-content">
     <div id="board-container">
       <div id="board"></div>
     </div>
-
     <div id="side-panel">
       <div id="side-panel-content">
         <div id="player-info"></div>
@@ -167,13 +170,14 @@
       </div>
     </div>
   </div>
-
+  
   <!-- Firebase + Chess.js -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.2/chess.min.js"></script>
-
+  
   <script>
+    // Firebase configuration and initialization
     const firebaseConfig = {
       apiKey: "AIzaSyAfIXmgq8FAXC4nQeErSCkEqn7vBbFCh_E",
       authDomain: "webchat-1185b.firebaseapp.com",
@@ -186,29 +190,30 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
 
+    // Retrieve roomId and color from sessionStorage
     const chessRef = db.collection("chessGames").doc(sessionStorage.getItem("roomId"));
     let myColor = sessionStorage.getItem("myColor");
-    console.log("[Debug] roomId:", sessionStorage.getItem("roomId"), "myColor:", myColor);
     if (!sessionStorage.getItem("roomId") || !myColor) {
       alert("No roomId / myColor in session. Redirecting...");
       window.location.href = "homescreen.html";
       throw new Error("Missing roomId or myColor in session storage.");
     }
 
+    // Symbols for pieces
     const pieceSymbols = {
       'K': '♔', 'Q': '♕', 'R': '♖', 'B': '♗', 'N': '♘', 'P': '♙',
       'k': '♚', 'q': '♛', 'r': '♜', 'b': '♝', 'n': '♞', 'p': '♟'
     };
 
+    // Initialize chess game and selected square
     let game = new Chess();
     let selectedSquare = null;
 
+    // Draw the board (creates an 8x8 table)
     function drawBoard() {
-      console.log("[Debug] drawBoard()");
       const boardDiv = document.getElementById('board');
       boardDiv.innerHTML = '';
       const table = document.createElement('table');
-
       const ranks = [8,7,6,5,4,3,2,1];
       for (let i = 0; i < 8; i++) {
         const row = document.createElement('tr');
@@ -229,8 +234,8 @@
       boardDiv.appendChild(table);
     }
 
+    // Update the board by reading the FEN from chess.js and updating each cell.
     function updateBoard() {
-      console.log("[Debug] updateBoard()");
       const fen = game.fen().split(' ')[0];
       const rows = fen.split('/');
       const rankOrder = [8,7,6,5,4,3,2,1];
@@ -262,6 +267,7 @@
         }
         rankIndex++;
       }
+      // Clear any leftover cells (if board was reset)
       for (const rank of rankOrder) {
         for (const fileChar of ['a','b','c','d','e','f','g','h']) {
           const square = fileChar + rank;
@@ -274,6 +280,7 @@
       }
     }
 
+    // Update the status message (whose turn, check, etc.)
     function updateStatus() {
       const turn = game.turn();
       let status = '';
@@ -289,6 +296,7 @@
       document.getElementById('status').textContent = status;
     }
 
+    // Update move history
     function updateMoveHistory() {
       const history = game.history();
       let html = '<ol>';
@@ -297,7 +305,6 @@
       });
       html += '</ol>';
       document.getElementById('move-history').innerHTML = html;
-      console.log("[Debug] Move history updated:", history);
     }
 
     function removeHighlights() {
@@ -313,7 +320,6 @@
     }
 
     function onSquareClick(square) {
-      console.log("[Debug] onSquareClick ->", square);
       const piece = game.get(square);
       if (!selectedSquare) {
         if (canSelectPiece(piece)) {
@@ -323,7 +329,6 @@
           highlightMovesFrom(square);
         }
       } else {
-        console.log("[Debug] Attempting move from", selectedSquare, "to", square);
         const move = game.move({
           from: selectedSquare,
           to: square,
@@ -332,11 +337,9 @@
         removeHighlights();
         selectedSquare = null;
         if (!move) {
-          console.log("[Debug] Illegal move, reverting board");
           updateBoard();
           return;
         }
-        console.log("[Debug] Move made:", move);
         chessRef.update({
           fen: game.fen(),
           pgn: game.pgn(),
@@ -346,7 +349,6 @@
     }
 
     function highlightMovesFrom(square) {
-      console.log("[Debug] highlightMovesFrom ->", square);
       const moves = game.moves({ square, verbose: true });
       moves.forEach(m => {
         const cell = document.getElementById(m.to);
@@ -355,7 +357,6 @@
     }
 
     function resetGameInFirestore() {
-      console.log("[Debug] resetGameInFirestore()");
       const newGame = new Chess();
       chessRef.set({
         fen: newGame.fen(),
@@ -366,21 +367,17 @@
 
     chessRef.onSnapshot(doc => {
       if (!doc.exists) {
-        console.log("[Debug] No doc found, creating new game...");
         resetGameInFirestore();
         return;
       }
       const data = doc.data();
       if (!data.fen && !data.pgn) {
-        console.log("[Debug] No fen/pgn in doc, resetting...");
         resetGameInFirestore();
         return;
       }
-      console.log("[Debug] onSnapshot doc data:", data);
       if (data.pgn) {
         game.reset();
-        const success = game.load_pgn(data.pgn);
-        console.log("[Debug] game.load_pgn => success:", success);
+        game.load_pgn(data.pgn);
       } else {
         game.load(data.fen);
       }
@@ -394,8 +391,6 @@
       if ((myColor === 'white' && game.turn() === 'w') ||
           (myColor === 'black' && game.turn() === 'b')) {
         resetGameInFirestore();
-      } else {
-        console.log("[Debug] Reset not allowed (not your turn).");
       }
     });
 

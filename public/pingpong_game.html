@@ -3,32 +3,32 @@
 <head>
   <title>Ping Pong Multiplayer</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
-
+  
   <style>
+    /* Reset and Global Styles */
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: linear-gradient(135deg, #0f0f0f 0%, #282828 100%);
+      background: linear-gradient(135deg, #0f0f0f, #282828);
       color: #eee;
       overflow: hidden;
       position: relative;
       animation: fadeIn 0.5s ease-out;
     }
-
     @keyframes fadeIn {
       from { opacity: 0; }
       to { opacity: 1; }
     }
-
+    
+    /* Container */
     #page-container {
       display: flex;
       flex-direction: column;
@@ -36,7 +36,7 @@
       width: 100%;
       overflow: hidden;
     }
-
+    
     header {
       text-align: center;
       padding: 20px 0;
@@ -58,7 +58,8 @@
       margin: 0 auto;
       line-height: 1.4em;
     }
-
+    
+    /* Main Content */
     #main-content {
       flex: 1;
       display: flex;
@@ -68,24 +69,25 @@
       gap: 30px;
       padding: 20px;
     }
-
+    
+    /* Game Area */
     #game-area {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
     }
-
     canvas {
       border: 2px solid #444;
       background: #000;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
       border-radius: 5px;
       margin-bottom: 20px;
+      width: 800px;
       max-width: 100%;
       height: auto;
     }
-
     #score {
       font-size: 24px;
       text-align: center;
@@ -96,7 +98,8 @@
       border-radius: 5px;
       box-shadow: 0 4px 10px rgba(0,0,0,0.5);
     }
-
+    
+    /* Instructions Panel (desktop) */
     #how-to-play {
       width: 300px;
       background-color: rgba(51,51,51,0.8);
@@ -128,52 +131,85 @@
     #how-to-play li {
       margin-bottom: 5px;
     }
-
+    
+    /* Mobile Adjustments */
     @media (max-width: 600px) {
       #main-content {
         flex-direction: column;
         gap: 20px;
+        padding: 10px;
       }
       #how-to-play {
-        width: 80%;
+        display: none;
       }
       canvas {
-        width: 95%;
-        height: auto;
+        width: 100%;
+      }
+    }
+    
+    /* Mobile Control Panel */
+    #control-panel {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90%;
+      max-width: 800px;
+      background: rgba(0,0,0,0.7);
+      padding: 10px;
+      border-radius: 8px;
+      justify-content: space-around;
+      align-items: center;
+      z-index: 200;
+    }
+    #control-panel button {
+      background: linear-gradient(135deg, #027a0d, #025815);
+      color: #fff;
+      border-radius: 4px;
+      padding: 10px;
+      font-size: 1rem;
+      flex: 1;
+      margin: 0 5px;
+    }
+    @media (max-width: 600px) {
+      #control-panel {
+        display: flex;
       }
     }
   </style>
 </head>
-
 <body>
   <div id="page-container">
     <header>
       <h1>Ping Pong Multiplayer</h1>
-      <p>Enjoy a fast-paced, real-time match against a friend. One player hosts as the left paddle, and the other joins as the right paddle!</p>
+      <p>Enjoy a fast-paced, real-time match. One player hosts (left paddle) and the other joins as guest (right paddle).</p>
     </header>
-
     <div id="main-content">
-      <!-- Game area -->
       <div id="game-area">
         <canvas id="gameCanvas" width="800" height="400"></canvas>
         <div id="score">0 : 0</div>
       </div>
-
-      <!-- Side panel for instructions -->
       <div id="how-to-play">
         <h2>How to Play</h2>
-        <p>This classic Pong-style game is played by two people in real-time. A ball bounces between the paddles, and your goal is to prevent it from passing your side.</p>
+        <p>A ball bounces between the paddles. Prevent it from escaping your side.</p>
         <ul>
-          <li><strong>Left Paddle (Host):</strong> Use <strong>W</strong> and <strong>S</strong> keys to move up/down.</li>
-          <li><strong>Right Paddle (Guest):</strong> Use <strong>↑</strong> and <strong>↓</strong> arrow keys to move.</li>
-          <li><strong>Score:</strong> A point is scored when the ball escapes the opponent’s side.</li>
+          <li><strong>Host:</strong> Use W/S keys on desktop or the control panel on mobile.</li>
+          <li><strong>Guest:</strong> Use Arrow keys on desktop or the control panel on mobile.</li>
+          <li><strong>Score:</strong> A point is scored when the ball escapes an opponent’s side.</li>
         </ul>
-        <p>Feel free to refresh and start a new match at any time. Have fun!</p>
+        <p>Refresh to start a new match.</p>
       </div>
     </div>
+    <!-- Mobile Control Panel -->
+    <div id="control-panel">
+      <button id="up-btn">▲</button>
+      <button id="down-btn">▼</button>
+    </div>
   </div>
-
+  
   <script>
+    // Firebase Setup
     const firebaseConfig = {
       apiKey: "AIzaSyAfIXmgq8FAXC4nQeErSCkEqn7vBbFCh_E",
       authDomain: "webchat-1185b.firebaseapp.com",
@@ -185,19 +221,74 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
-
+    
+    // Determine if current user is host
     const isHost = sessionStorage.getItem("myColor") === "white";
     const roomId = sessionStorage.getItem("roomId") || "demoRoom";
     const gameRef = db.collection("games").doc(roomId);
-
+    
+    // Canvas and context
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+    
+    // Game Settings
+    const paddleWidth = 10;
+    const paddleHeight = 80;
+    const ballRadius = 8;
+    let leftPaddleY = canvas.height / 2 - paddleHeight / 2;
+    let rightPaddleY = canvas.height / 2 - paddleHeight / 2;
+    let ballX = canvas.width / 2;
+    let ballY = canvas.height / 2;
+    let ballDX = isHost ? 4 : -4;
+    let ballDY = 2;
+    let scoreLeft = 0;
+    let scoreRight = 0;
+    
+    // Desktop keyboard controls fallback
+    const keys = {};
+    document.addEventListener("keydown", e => { keys[e.code] = true; });
+    document.addEventListener("keyup", e => { keys[e.code] = false; });
+    
+    let lastWriteTime = 0;
+    const writeInterval = 33;
+    
+    // Mobile control panel buttons
+    const upBtn = document.getElementById("up-btn");
+    const downBtn = document.getElementById("down-btn");
+    let upInterval, downInterval;
+    
+    upBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      upInterval = setInterval(() => {
+        if (isHost) {
+          leftPaddleY = Math.max(0, leftPaddleY - 15);
+        } else {
+          rightPaddleY = Math.max(0, rightPaddleY - 15);
+        }
+      }, 100);
+    });
+    upBtn.addEventListener("touchend", () => { clearInterval(upInterval); });
+    downBtn.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      downInterval = setInterval(() => {
+        if (isHost) {
+          leftPaddleY = Math.min(canvas.height - paddleHeight, leftPaddleY + 15);
+        } else {
+          rightPaddleY = Math.min(canvas.height - paddleHeight, rightPaddleY + 15);
+        }
+      }, 100);
+    });
+    downBtn.addEventListener("touchend", () => { clearInterval(downInterval); });
+    
+    // For Host: initialize game room if needed
     if (isHost) {
       gameRef.get().then(docSnap => {
         if (!docSnap.exists) {
           gameRef.set({
-            leftPaddleY: canvas.height / 2 - 40,
-            rightPaddleY: canvas.height / 2 - 40,
-            ballX: 400,
-            ballY: 200,
+            leftPaddleY: leftPaddleY,
+            rightPaddleY: rightPaddleY,
+            ballX: ballX,
+            ballY: ballY,
             ballDX: 4,
             ballDY: 2,
             scoreLeft: 0,
@@ -207,7 +298,7 @@
         }
       }).catch(err => console.error("Error reading game doc:", err));
     }
-
+    
     gameRef.onSnapshot(docSnap => {
       if (!docSnap.exists) return;
       const data = docSnap.data() || {};
@@ -224,32 +315,7 @@
     }, err => {
       console.error("Snapshot error:", err);
     });
-
-    const canvas = document.getElementById("gameCanvas");
-    const ctx = canvas.getContext("2d");
-
-    const paddleWidth = 10;
-    const paddleHeight = 80;
-    const ballRadius = 8;
-
-    let leftPaddleY = canvas.height / 2 - paddleHeight / 2;
-    let rightPaddleY = canvas.height / 2 - paddleHeight / 2;
-
-    let ballX = canvas.width / 2;
-    let ballY = canvas.height / 2;
-    let ballDX = isHost ? 4 : -4;
-    let ballDY = 2;
-
-    let scoreLeft = 0;
-    let scoreRight = 0;
-
-    const keys = {};
-    document.addEventListener("keydown", e => { keys[e.code] = true; });
-    document.addEventListener("keyup",   e => { keys[e.code] = false; });
-
-    let lastWriteTime = 0;
-    const writeInterval = 33;
-
+    
     function gameLoop() {
       update();
       draw();
@@ -272,36 +338,15 @@
       requestAnimationFrame(gameLoop);
     }
     requestAnimationFrame(gameLoop);
-
+    
     function update() {
+      // Desktop keyboard controls fallback
       if (isHost) {
         if (keys["KeyW"] && leftPaddleY > 0) {
           leftPaddleY -= 5;
         }
         if (keys["KeyS"] && leftPaddleY + paddleHeight < canvas.height) {
           leftPaddleY += 5;
-        }
-        ballX += ballDX;
-        ballY += ballDY;
-        if (ballY - ballRadius < 0 || ballY + ballRadius > canvas.height) {
-          ballDY = -ballDY;
-        }
-        if (ballX - ballRadius <= 10 + paddleWidth) {
-          if (ballY > leftPaddleY && ballY < leftPaddleY + paddleHeight) {
-            ballDX = Math.abs(ballDX);
-          }
-        }
-        if (ballX + ballRadius >= canvas.width - 10 - paddleWidth) {
-          if (ballY > rightPaddleY && ballY < rightPaddleY + paddleHeight) {
-            ballDX = -Math.abs(ballDX);
-          }
-        }
-        if (ballX + ballRadius < 0) {
-          scoreRight++;
-          resetBall();
-        } else if (ballX - ballRadius > canvas.width) {
-          scoreLeft++;
-          resetBall();
         }
       } else {
         let moved = false;
@@ -320,15 +365,38 @@
           }).catch(err => console.error("Error updating non-host paddle:", err));
         }
       }
+      // Update ball position and handle collisions
+      ballX += ballDX;
+      ballY += ballDY;
+      if (ballY - ballRadius < 0 || ballY + ballRadius > canvas.height) {
+        ballDY = -ballDY;
+      }
+      if (ballX - ballRadius <= 10 + paddleWidth) {
+        if (ballY > leftPaddleY && ballY < leftPaddleY + paddleHeight) {
+          ballDX = Math.abs(ballDX);
+        }
+      }
+      if (ballX + ballRadius >= canvas.width - 10 - paddleWidth) {
+        if (ballY > rightPaddleY && ballY < rightPaddleY + paddleHeight) {
+          ballDX = -Math.abs(ballDX);
+        }
+      }
+      if (ballX + ballRadius < 0) {
+        scoreRight++;
+        resetBall();
+      } else if (ballX - ballRadius > canvas.width) {
+        scoreLeft++;
+        resetBall();
+      }
     }
-
+    
     function resetBall() {
       ballX = canvas.width / 2;
       ballY = canvas.height / 2;
       ballDX = isHost ? 4 : -4;
       ballDY = (Math.random() < 0.5 ? 1 : -1) * 2;
     }
-
+    
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#fff";
