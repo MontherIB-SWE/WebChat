@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Chat & Game Challenges</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-analytics-compat.js"></script>
+  <script src="firebase-config.js"></script>
+
+  <style>
+    /* Reset & Global Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #0f0f0f 0%, #282828 100%);
+      color: #eee;
+      min-height: 100vh;
+      overflow: hidden;
+      animation: fadeIn 0.5s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    a, button {
+      cursor: pointer;
+      border: none;
+      outline: none;
+      transition: transform 0.2s;
+    }
+    a:hover, button:hover {
+      transform: translateY(-2px);
+    }
+
+    /* ------------- Sidebar ------------- */
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 250px;
+      height: 100%;
+      background-color: rgba(34,34,34,0.95);
+      box-shadow: 4px 0 6px rgba(0,0,0,0.5);
+      padding: 20px;
+      transform: translateX(-260px);
+      z-index: 130;
+      backdrop-filter: blur(3px);
+      transition: transform 0.3s ease;
+    }
+    #sidebar.open {
+      transform: translateX(0);
+    }
+    #sidebar h2 {
+      color: #fff;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: 1.6rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    #close-sidebar {
+      background: none;
+      color: #eee;
+      font-size: 1.8rem;
+      cursor: pointer;
+      margin-bottom: 20px;
+    }
+    #close-sidebar:hover {
+      color: #ccc;
+    }
+    #sidebar button {
+      width: 100%;
+      margin-bottom: 15px;
+      padding: 10px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 3px;
+      background: linear-gradient(135deg, #027a0d, #025815);
+      color: #fff;
+      transition: background-color 0.2s;
+    }
+    #sidebar button:hover {
+      filter: brightness(1.1);
+    }
+
+    /* ------------- Main Content ------------- */
+    #main-content {
+      width: 100%;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      transition: filter 0.3s ease;
+    }
+    #main-content.dimmed {
+      filter: brightness(0.6);
+    }
+
+    /* Sidebar Overlay */
+    #modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(5px);
+      z-index: 110;
+      display: none;
+    }
+    #modal-overlay.active {
+      display: block;
+    }
+
+    /* ------------- Friends Screen ------------- */
+    #friends-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    #friends-header {
+      display: flex;
+      align-items: center;
+      background-color: rgba(34, 34, 34, 0.9);
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      justify-content: space-between;
+    }
+    #toggle-sidebar {
+      background: none;
+      color: #eee;
+      font-size: 1.5rem;
+    }
+    #friends-header h2 {
+      font-size: 1.4rem;
+      text-transform: uppercase;
+      margin: 0;
+      color: #fff;
+    }
+    #friends-list-container {
+      flex: 1;
+      background-color: rgba(42,42,42,0.85);
+      overflow-y: auto;
+      padding: 15px;
+    }
+    #friends-list-container ul {
+      list-style: none;
+    }
+    #friends-list-container li {
+      background: linear-gradient(135deg, #555, #404040);
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      transition: background 0.2s, transform 0.2s;
+    }
+    #friends-list-container li:hover {
+      background: linear-gradient(135deg, #666, #505050);
+      transform: translateX(3px);
+    }
+    #no-friends-message {
+      text-align: center;
+      margin-top: 20px;
+      color: #ccc;
+    }
+
+    /* ------------- Chat Screen ------------- */
+    #chat-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: none; /* hidden by default */
+      flex-direction: column;
+      background-color: rgba(0,0,0,0);
+    }
+    #chat-top-bar {
+      display: flex;
+      align-items: center;
+      background-color: rgba(34, 34, 34, 0.9);
+      padding: 15px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    }
+    #back-button {
+      background: none;
+      color: #fff;
+      font-size: 1.2rem;
+      margin-right: 15px;
+    }
+    #chat-with-username {
+      font-size: 1.2rem;
+      font-weight: bold;
+      text-transform: uppercase;
+      color: #fff;
+    }
+    #chat-messages {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 15px;
+      overflow-y: auto;
+      scroll-behavior: smooth;
+      background-color: rgba(51,51,51,0.8);
+    }
+    .message {
+      margin-bottom: 10px;
+      padding: 8px 10px;
+      border-radius: 5px;
+      max-width: 75%;
+      background-color: #555;
+      box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+      word-wrap: break-word;
+      line-height: 1.4rem;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+    }
+    .message.sent {
+      margin-left: auto;
+      background-color: #2e7d32;
+      align-self: flex-end;
+    }
+    @keyframes slideInFromRight {
+      from { opacity: 0; transform: translateX(100%); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideOutToRight {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(100%); }
+    }
+    .chat-animate-in {
+      animation: slideInFromRight 0.5s ease-out forwards;
+    }
+    .chat-animate-out {
+      animation: slideOutToRight 0.5s ease-out forwards;
+    }
+    #chat-input {
+      display: flex;
+      padding: 10px;
+      border-top: 1px solid #444;
+      background-color: #222;
+      align-items: center;
+    }
+    #message {
+      flex: 1;
+      padding: 10px;
+      border: 1px solid #666;
+      border-radius: 3px;
+      background-color: #333;
+      color: #eee;
+      margin-right: 10px;
+      outline: none;
+      font-size: 0.9rem;
+    }
+    #message:focus {
+      border-color: #2e7d32;
+    }
+    #send-btn {
+      padding: 10px 20px;
+      border-radius: 3px;
+      background-color: #007bff;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+    #challenge-btn {
+      padding: 10px 20px;
+      margin-left: 8px;
+      border-radius: 3px;
+      background-color: #ef5350;
+      color: #fff;
+      font-size: 0.9rem;
+    }
+
+    /* ------------- Modals (Add Friend, Requests, etc.) ------------- */
+    .modal-card {
+      background-color: rgba(34,34,34,0.98);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 20px rgba(0,0,0,0.8);
+      color: #fff;
+      z-index: 130;
+      display: none;
+      width: 360px;
+      max-width: 90%;
+      text-align: center;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .modal-card h3 {
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .modal-card label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: bold;
+    }
+    .modal-card input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #666;
+      border-radius: 4px;
+      background-color: #333;
+      color: #eee;
+      margin-bottom: 15px;
+      outline: none;
+    }
+    .button-group {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+    }
+    .button-group button {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      border-radius: 4px;
+      background-color: #007bff;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    .button-group button:hover {
+      background-color: #005bb5;
+    }
+    .modal-card ul {
+      list-style: none;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      margin: 15px 0;
+    }
+    .modal-card li {
+      background-color: #444;
+      margin-bottom: 10px;
+      padding: 10px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s, transform 0.2s;
+    }
+    .modal-card li:hover {
+      background-color: #555;
+      transform: translateX(3px);
+    }
+    .modal-card li button {
+      padding: 5px 10px;
+      border: none;
+      border-radius: 3px;
+      background-color: #0288d1;
+      color: #fff;
+      cursor: pointer;
+      transition: background-color 0.2s, transform 0.2s;
+    }
+    .modal-card li button:hover {
+      background-color: #02669b;
+      transform: scale(1.05);
+    }
+    /* Game Requests */
+    #game-request-list li {
+      align-items: center;
+    }
+    #game-request-list li button:first-of-type {
+      background-color: #2e7d32;
+      margin-right: 5px;
+    }
+    #game-request-list li button:first-of-type:hover {
+      background-color: #1e5e24;
+    }
+    #game-request-list li button:last-of-type {
+      background-color: #d32f2f;
+    }
+    #game-request-list li button:last-of-type:hover {
+      background-color: #b71c1c;
+    }
+    /* Game Selection Modal */
+    #game-select-modal {
+      width: 360px;
+      max-width: 90%;
+    }
+    #game-select-modal h3 {
+      margin-bottom: 15px;
+      font-size: 1.4rem;
+    }
+    .game-options {
+      display: flex;
+      justify-content: space-around;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .game-option {
+      flex: 1;
+      padding: 15px;
+      border-radius: 8px;
+      background: linear-gradient(135deg, #027a0d, #025815);
+      color: #fff;
+      font-size: 1.1rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .game-option:hover {
+      transform: translateY(-3px);
+      background: linear-gradient(135deg, #037c1e, #025815);
+    }
+    .game-option .game-icon {
+      font-size: 1.8rem;
+      margin-bottom: 5px;
+    }
+    #cancel-game-select {
+      padding: 10px 20px;
+      font-size: 1rem;
+      background: #444;
+      border-radius: 4px;
+      color: #eee;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    #cancel-game-select:hover {
+      background: #555;
+    }
+
+    /* Mobile Responsiveness */
+    @media (max-width: 600px) {
+      #sidebar {
+        width: 200px;
+      }
+      #friends-header h2 {
+        font-size: 1.2rem;
+      }
+      #toggle-sidebar {
+        font-size: 1.2rem;
+      }
+      #chat-with-username {
+        font-size: 1rem;
+      }
+      #back-button {
+        font-size: 1rem;
+      }
+      #message, #send-btn, #challenge-btn {
+        font-size: 0.8rem;
+      }
+      .message {
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div id="sidebar" class="closed">
+    <button id="close-sidebar">&times; Close</button>
+    <h2>Menu</h2>
+    <button id="profile-btn">Profile</button>
+    <button id="add-friends-btn">Add Friends</button>
+    <button id="friend-requests-btn">Friend Requests</button>
+    <button id="game-requests-btn">Game Requests</button>
+    <button id="logout-btn">Logout</button>
+  </div>
+
+  <!-- Modal overlay (for side menu, modals, etc.) -->
+  <div id="modal-overlay"></div>
+
+  <!-- Main content container -->
+  <div id="main-content">
+    <!-- Friends Screen -->
+    <div id="friends-screen">
+      <div id="friends-header">
+        <button id="toggle-sidebar">&#9776;</button>
+        <h2>Friends</h2>
+      </div>
+      <div id="friends-list-container">
+        <ul id="friends-list"></ul>
+        <span id="no-friends-message"></span>
+      </div>
+    </div>
+
+    <!-- Chat Screen -->
+    <div id="chat-screen">
+      <div id="chat-top-bar">
+        <button id="back-button">&larr;</button>
+        <span id="chat-with-username"></span>
+      </div>
+      <div id="chat-messages"></div>
+      <div id="chat-input">
+        <input id="message" type="text" placeholder="Enter message">
+        <button id="send-btn">Send</button>
+        <button id="challenge-btn" style="display: none;">Challenge</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modals: Add Friend -->
+  <div id="add-friend-modal" class="modal-card">
+    <form>
+      <h3>Add Friend</h3>
+      <label for="friend-email">Email:</label>
+      <input type="email" id="friend-email" required autocomplete="off">
+      <div class="button-group">
+        <button id="add-friend-submit">Send Request</button>
+        <button id="close-add-friend">Close</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Modals: Friend Requests -->
+  <div id="requests-container" class="modal-card">
+    <h3>Friend Requests</h3>
+    <ul id="request-list"></ul>
+    <div class="button-group">
+      <button id="close-requests">Close</button>
+    </div>
+  </div>
+
+  <!-- Modals: Game Requests -->
+  <div id="game-requests-container" class="modal-card">
+    <h3>Game Requests</h3>
+    <ul id="game-request-list"></ul>
+    <div class="button-group">
+      <button id="close-game-requests">Close</button>
+    </div>
+  </div>
+
+  <!-- Modals: Game Selection -->
+  <div id="game-select-modal" class="modal-card">
+    <h3>Select a Game</h3>
+    <div class="game-options">
+      <div class="game-option" data-game="Ping Pong">
+        <span class="game-icon">🏓</span>
+        <span class="game-name">Ping Pong</span>
+      </div>
+      <div class="game-option" data-game="Chess">
+        <span class="game-icon">♟️</span>
+        <span class="game-name">Chess</span>
+      </div>
+    </div>
+    <button id="cancel-game-select">Cancel</button>
+  </div>
+
+  <script>
+    /* ---------------- Firebase Setup ---------------- */
+  
+    firebase.initializeApp(firebaseConfig);
+    firebase.analytics();
+   
+    /* ---------------- Element References ---------------- */
+    const sidebar = document.getElementById('sidebar');
+    const toggleSidebarBtn = document.getElementById('toggle-sidebar');
+    const closeSidebarBtn = document.getElementById('close-sidebar');
+    const mainContent = document.getElementById('main-content');
+    const modalOverlay = document.getElementById('modal-overlay');
+
+    // Screens
+    const friendsScreen = document.getElementById('friends-screen');
+    const chatScreen = document.getElementById('chat-screen');
+
+    // Friends Screen
+    const friendsList = document.getElementById('friends-list');
+    const noFriendsMsg = document.getElementById('no-friends-message');
+
+    // Chat Screen
+    const backButton = document.getElementById('back-button');
+    const chatWithUsernameEl = document.getElementById('chat-with-username');
+    const chatMessages = document.getElementById('chat-messages');
+    const chatInput = document.getElementById('chat-input');
+    const messageInput = document.getElementById('message');
+    const sendBtn = document.getElementById('send-btn');
+    const challengeBtn = document.getElementById('challenge-btn');
+
+    // Sidebar buttons
+    const profileBtn = document.getElementById('profile-btn');
+    const addFriendsBtn = document.getElementById('add-friends-btn');
+    const friendRequestsBtn = document.getElementById('friend-requests-btn');
+    const gameRequestsBtn = document.getElementById('game-requests-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+
+    // Modals: Add Friend
+    const addFriendModal = document.getElementById('add-friend-modal');
+    const friendEmailInput = document.getElementById('friend-email');
+    const addFriendSubmit = document.getElementById('add-friend-submit');
+    const closeAddFriendBtn = document.getElementById('close-add-friend');
+
+    // Modals: Friend Requests
+    const requestsContainer = document.getElementById('requests-container');
+    const requestList = document.getElementById('request-list');
+    const closeRequests = document.getElementById('close-requests');
+
+    // Modals: Game Requests
+    const gameRequestsContainer = document.getElementById('game-requests-container');
+    const gameRequestList = document.getElementById('game-request-list');
+    const closeGameRequests = document.getElementById('close-game-requests');
+
+    // Modals: Game Select
+    const gameSelectModal = document.getElementById('game-select-modal');
+    const cancelGameSelect = document.getElementById('cancel-game-select');
+    const gameOptions = document.querySelectorAll('.game-option');
+
+    let currentUsername = '';
+    let selectedFriend = '';
+    let chatListenerUnsubscribe = null;
+
+    /* ---------------- On Page Load ---------------- */
+    document.addEventListener('DOMContentLoaded', () => {
+      currentUsername = sessionStorage.getItem('username');
+      const token = sessionStorage.getItem('token');
+      if (!currentUsername || !token) {
+        window.location.href = 'index.html';
+        return;
+      }
+      currentUsername = currentUsername.trim().toLowerCase();
+
+      loadFriendsList(currentUsername);
+    });
+
+    /* ---------------- Sidebar Toggle Logic ---------------- */
+    toggleSidebarBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      if (sidebar.classList.contains('open')) {
+        modalOverlay.classList.add('active');
+        mainContent.classList.add('dimmed');
+      }
+    });
+    closeSidebarBtn.addEventListener('click', () => {
+      closeSidebar();
+    });
+    modalOverlay.addEventListener('click', () => {
+      // If user clicks outside the sidebar while it's open, close it
+      if (sidebar.classList.contains('open')) {
+        closeSidebar();
+      }
+    });
+    function closeSidebar() {
+      sidebar.classList.remove('open');
+      modalOverlay.classList.remove('active');
+      mainContent.classList.remove('dimmed');
+    }
+
+    /* ---------------- Profile Button ---------------- */
+    profileBtn.addEventListener('click', () => {
+      // Redirect to profile page
+      window.location.href = 'profile.html';
+    });
+
+    /* ---------------- Load Friends List ---------------- */
+    function loadFriendsList(username) {
+      db.collection("users").doc(username).get()
+        .then(doc => {
+          if (doc.exists) {
+            const data = doc.data();
+            const friendsEmails = data.friends || [];
+            friendsList.innerHTML = '';
+            if (friendsEmails.length === 0) {
+              noFriendsMsg.textContent = "You have no friends yet.";
+              return;
+            }
+            noFriendsMsg.textContent = '';
+            Promise.all(
+              friendsEmails.map(email => db.collection("users").doc(email).get())
+            ).then(friendDocs => {
+              friendDocs.forEach(friendDoc => {
+                const friendName = friendDoc.exists && friendDoc.data().name
+                  ? friendDoc.data().name
+                  : friendDoc.id;
+                const li = document.createElement('li');
+                li.textContent = friendName;
+                li.addEventListener('click', () => openChat(friendDoc.id, friendName));
+                friendsList.appendChild(li);
+              });
+            })
+            .catch(err => console.error("Error loading friend names:", err));
+          } else {
+            console.error("User document not found:", username);
+          }
+        })
+        .catch(err => console.error("Error fetching user doc:", err));
+    }
+
+    /* ---------------- Open Chat Screen with Animation ---------------- */
+    function openChat(friendId, friendName) {
+      selectedFriend = friendId;
+      chatWithUsernameEl.textContent = friendName;
+      
+      // Show chat screen with a slide-in animation
+      chatScreen.style.display = 'flex';
+      chatScreen.classList.add('chat-animate-in');
+      // After animation, remove the animation class
+      setTimeout(() => {
+        chatScreen.classList.remove('chat-animate-in');
+      }, 500);
+      friendsScreen.style.display = 'none';
+
+      // Clear old messages and show challenge button
+      chatMessages.innerHTML = '';
+      challengeBtn.style.display = 'inline-block';
+
+      // Unsubscribe from any previous chat
+      if (chatListenerUnsubscribe) {
+        chatListenerUnsubscribe();
+      }
+
+      // Listen for messages between current user & selected friend
+      chatListenerUnsubscribe = db.collection("messages")
+        .where("participants", "array-contains", currentUsername)
+        .orderBy("timestamp")
+        .onSnapshot(snapshot => {
+          snapshot.docChanges().forEach(change => {
+            if (change.type === "added") {
+              const msgData = change.doc.data();
+              if (
+                (msgData.sender === currentUsername && msgData.recipient === friendId) ||
+                (msgData.sender === friendId && msgData.recipient === currentUsername)
+              ) {
+                addMessageToChat(msgData.sender, msgData.content);
+              }
+            }
+          });
+        }, error => {
+          console.error("Error in chat snapshot:", error);
+        });
+    }
+
+    /* ---------------- Back Button: Close Chat with Animation ---------------- */
+    backButton.addEventListener('click', () => {
+      // Add slide-out animation before switching screens
+      chatScreen.classList.add('chat-animate-out');
+      setTimeout(() => {
+        chatScreen.style.display = 'none';
+        chatScreen.classList.remove('chat-animate-out');
+        friendsScreen.style.display = 'flex';
+      }, 500);
+      if (chatListenerUnsubscribe) {
+        chatListenerUnsubscribe();
+      }
+      chatListenerUnsubscribe = null;
+      selectedFriend = '';
+    });
+
+    /* ---------------- Add Message to Chat ---------------- */
+    function addMessageToChat(sender, content) {
+      const msgDiv = document.createElement('div');
+      msgDiv.classList.add('message', 'new-message');
+      if (sender === currentUsername) {
+        msgDiv.classList.add('sent');
+      }
+      const strongSender = document.createElement('strong');
+      strongSender.textContent = sender === currentUsername ? "You: " : sender + ": ";
+      const textP = document.createElement('p');
+      textP.textContent = content;
+
+      msgDiv.appendChild(strongSender);
+      msgDiv.appendChild(textP);
+      chatMessages.appendChild(msgDiv);
+
+      // Auto-scroll to latest message
+      setTimeout(() => {
+        chatMessages.scrollTo({
+          top: chatMessages.scrollHeight,
+          behavior: 'smooth'
+        });
+      }, 50);
+    }
+
+    /* ---------------- Send Message ---------------- */
+    sendBtn.addEventListener('click', () => {
+      const msg = messageInput.value.trim();
+      if (!msg || !selectedFriend) return;
+      db.collection("messages").add({
+        sender: currentUsername,
+        recipient: selectedFriend,
+        content: msg,
+        participants: [currentUsername, selectedFriend],
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then(() => {
+        messageInput.value = '';
+      })
+      .catch(err => console.error("Error sending message:", err));
+    });
+    messageInput.addEventListener('keyup', e => {
+      if (e.key === 'Enter') {
+        sendBtn.click();
+      }
+    });
+
+    /* ---------------- Logout ---------------- */
+    logoutBtn.addEventListener('click', () => {
+      sessionStorage.clear();
+      auth.signOut()
+        .then(() => window.location.href = 'index.html')
+        .catch(err => console.error("Logout failed:", err));
+    });
+
+    /* ---------------- Add Friend Modal ---------------- */
+    addFriendsBtn.addEventListener('click', () => {
+      closeSidebar();
+      openModal(addFriendModal);
+    });
+    addFriendSubmit.addEventListener('click', e => {
+      e.preventDefault();
+      const friendEmail = friendEmailInput.value.trim().toLowerCase();
+      if (!friendEmail) {
+        alert("Please enter an email.");
+        return;
+      }
+      db.collection("users").doc(friendEmail).get()
+        .then(doc => {
+          if (doc.exists) {
+            db.collection("friendRequests").add({
+              sender: currentUsername,
+              recipient: friendEmail,
+              status: "pending",
+              timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            })
+            .then(() => {
+              alert("Friend request sent!");
+              closeModal(addFriendModal);
+            })
+            .catch(err => {
+              console.error("Error sending friend request:", err);
+              alert("Error: " + err.message);
+            });
+          } else {
+            alert("No user found with that email.");
+          }
+        })
+        .catch(err => {
+          console.error("Error checking user doc:", err);
+          alert("Error: " + err.message);
+        });
+    });
+    closeAddFriendBtn.addEventListener('click', e => {
+      e.preventDefault();
+      closeModal(addFriendModal);
+    });
+
+    /* ---------------- Friend Requests Modal ---------------- */
+    friendRequestsBtn.addEventListener('click', () => {
+      closeSidebar();
+      openModal(requestsContainer);
+      loadFriendRequests();
+    });
+    closeRequests.addEventListener('click', e => {
+      e.preventDefault();
+      closeModal(requestsContainer);
+    });
+    function loadFriendRequests() {
+      requestList.innerHTML = '';
+      db.collection("friendRequests")
+        .where("recipient", "==", currentUsername)
+        .where("status", "==", "pending")
+        .orderBy("timestamp")
+        .get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            requestList.innerHTML = "<li>No friend requests</li>";
+          } else {
+            snapshot.forEach(doc => {
+              const req = doc.data();
+              const li = document.createElement('li');
+              li.textContent = req.sender;
+              const acceptBtn = document.createElement('button');
+              acceptBtn.textContent = "Accept";
+              acceptBtn.addEventListener('click', () => acceptFriendRequest(doc.id, req.sender));
+              const rejectBtn = document.createElement('button');
+              rejectBtn.textContent = "Reject";
+              rejectBtn.addEventListener('click', () => rejectFriendRequest(doc.id));
+              li.appendChild(acceptBtn);
+              li.appendChild(rejectBtn);
+              requestList.appendChild(li);
+            });
+          }
+        })
+        .catch(err => console.error("Error loading friend requests:", err));
+    }
+    function acceptFriendRequest(requestId, senderEmail) {
+      const currentUserRef = db.collection("users").doc(currentUsername);
+      const senderRef = db.collection("users").doc(senderEmail);
+      const requestRef = db.collection("friendRequests").doc(requestId);
+
+      const batch = db.batch();
+      batch.update(currentUserRef, { friends: firebase.firestore.FieldValue.arrayUnion(senderEmail) });
+      batch.update(senderRef, { friends: firebase.firestore.FieldValue.arrayUnion(currentUsername) });
+      batch.update(requestRef, { status: "accepted" });
+
+      batch.commit()
+        .then(() => {
+          alert("Friend request accepted!");
+          loadFriendRequests();
+          loadFriendsList(currentUsername);
+        })
+        .catch(err => {
+          console.error("Error accepting friend request:", err);
+          alert("Error: " + err.message);
+        });
+    }
+    function rejectFriendRequest(requestId) {
+      db.collection("friendRequests").doc(requestId).update({ status: "rejected" })
+      .then(() => {
+        alert("Friend request rejected.");
+        loadFriendRequests();
+      })
+      .catch(err => {
+        console.error("Error rejecting request:", err);
+        alert("Error: " + err.message);
+      });
+    }
+
+    /* ---------------- Game Requests Modal ---------------- */
+    gameRequestsBtn.addEventListener('click', () => {
+      closeSidebar();
+      openModal(gameRequestsContainer);
+      loadGameRequests();
+    });
+    closeGameRequests.addEventListener('click', e => {
+      e.preventDefault();
+      closeModal(gameRequestsContainer);
+    });
+    function loadGameRequests() {
+      gameRequestList.innerHTML = '';
+      db.collection("gameRequests")
+        .where("recipient", "==", currentUsername)
+        .where("recipientAccepted", "==", false)
+        .where("status", "==", "pending")
+        .orderBy("timestamp")
+        .get()
+        .then(snapshot => {
+          if (snapshot.empty) {
+            gameRequestList.innerHTML = "<li>No game requests</li>";
+          } else {
+            snapshot.forEach(doc => {
+              const req = doc.data();
+              const li = document.createElement('li');
+              li.textContent = `${req.sender} challenged you to play ${req.gameType}`;
+              const acceptBtn = document.createElement('button');
+              acceptBtn.textContent = "Accept";
+              acceptBtn.addEventListener('click', () => acceptGameRequest(doc.id, req.sender, req.gameType));
+              const rejectBtn = document.createElement('button');
+              rejectBtn.textContent = "Reject";
+              rejectBtn.addEventListener('click', () => rejectGameRequest(doc.id));
+              li.appendChild(acceptBtn);
+              li.appendChild(rejectBtn);
+              gameRequestList.appendChild(li);
+            });
+          }
+        })
+        .catch(err => console.error("Error loading game requests:", err));
+    }
+    function acceptGameRequest(reqId, senderEmail, gameType) {
+      const reqRef = db.collection("gameRequests").doc(reqId);
+      reqRef.update({ recipientAccepted: true })
+        .then(() => {
+          reqRef.get().then(doc => {
+            const data = doc.data();
+            if (data && data.senderAccepted && data.recipientAccepted) {
+              alert("Game request accepted! Redirecting...");
+              if (data.sender === currentUsername) {
+                sessionStorage.setItem("myColor", "white");
+              } else {
+                sessionStorage.setItem("myColor", "black");
+              }
+              sessionStorage.setItem("roomId", reqId);
+              window.location.href = (gameType === "Chess") ? "chess_game.html" : "pingpong_game.html";
+            }
+          });
+        })
+        .catch(err => {
+          console.error("Error accepting game request:", err);
+          alert("Error: " + err.message);
+        });
+    }
+    function rejectGameRequest(reqId) {
+      db.collection("gameRequests").doc(reqId).update({ status: "rejected" })
+      .then(() => {
+        alert("Game request rejected.");
+        loadGameRequests();
+      })
+      .catch(err => {
+        console.error("Error rejecting game request:", err);
+        alert("Error: " + err.message);
+      });
+    }
+
+    /* ---------------- Challenge Button: Show Game Select Modal ---------------- */
+    challengeBtn.addEventListener('click', () => {
+      if (!selectedFriend) {
+        alert("No active chat selected to challenge!");
+        return;
+      }
+      openModal(gameSelectModal);
+    });
+    gameOptions.forEach(opt => {
+      opt.addEventListener('click', () => {
+        const gameType = opt.getAttribute('data-game');
+        sendGameRequest(gameType);
+        closeModal(gameSelectModal);
+      });
+    });
+    cancelGameSelect.addEventListener('click', () => {
+      closeModal(gameSelectModal);
+    });
+    function sendGameRequest(gameType) {
+      db.collection("gameRequests").add({
+        sender: currentUsername,
+        recipient: selectedFriend,
+        senderAccepted: true,
+        recipientAccepted: false,
+        status: "pending",
+        gameType: gameType,
+        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+      })
+      .then(docRef => {
+        if (!docRef.id) {
+          console.error("No docRef ID. Something went wrong.");
+          return;
+        }
+        alert(`Challenge sent for ${gameType}! Waiting for acceptance...`);
+        sessionStorage.setItem("myColor", "white");
+        sessionStorage.setItem("roomId", docRef.id);
+        listenOutgoingGame(docRef.id, gameType);
+      })
+      .catch(err => {
+        console.error("Error sending game request:", err);
+        alert("Error: " + err.message);
+      });
+    }
+    function listenOutgoingGame(docId, gameType) {
+      db.collection("gameRequests").doc(docId)
+        .onSnapshot(doc => {
+          const data = doc.data();
+          if (data && data.senderAccepted && data.recipientAccepted) {
+            alert("Your challenge was accepted! Redirecting...");
+            sessionStorage.setItem("roomId", docId);
+            window.location.href = (gameType === "Chess") ? "chess_game.html" : "pingpong_game.html";
+          }
+        });
+    }
+
+    /* ---------------- Helper: Open/Close Modals ---------------- */
+    function openModal(modalEl) {
+      modalOverlay.classList.add('active');
+      modalEl.style.display = 'block';
+    }
+    function closeModal(modalEl) {
+      modalEl.style.display = 'none';
+      modalOverlay.classList.remove('active');
+    }
+  </script>
+
+  <!-- CSS Animations for Chat Screen -->
+  <style>
+    @keyframes slideInFromRight {
+      from { opacity: 0; transform: translateX(100%); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    @keyframes slideOutToRight {
+      from { opacity: 1; transform: translateX(0); }
+      to { opacity: 0; transform: translateX(100%); }
+    }
+    .chat-animate-in {
+      animation: slideInFromRight 0.5s ease-out forwards;
+    }
+    .chat-animate-out {
+      animation: slideOutToRight 0.5s ease-out forwards;
+    }
+  </style>
+</body>
+</html>
