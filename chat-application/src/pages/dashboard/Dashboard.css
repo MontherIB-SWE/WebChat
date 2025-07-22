@@ -1,0 +1,72 @@
+/* Add this to your Dashboard.css file */
+
+/* Main container for the whole page */
+.dashboard-container {
+    display: flex;
+    height: 100vh; /* Full screen height */
+    width: 100%;   /* FIX: Changed from 100vh to 100% to fill screen width */
+    background-color: #f4f7f6;
+    font-family: sans-serif;
+}
+
+/* The sidebar navigation */
+.sidebar {
+    width: 80px; /* Width of the sidebar */
+    background-color: #2c3e50; /* Dark sidebar color */
+    display: flex;
+    flex-direction: column; /* Stack icons vertically */
+    align-items: center; /* Center icons horizontally */
+    gap: 30px; /* Space between icons */
+    flex-shrink: 0; /* Prevents the sidebar from shrinking */
+}
+
+/* Styling for the icons */
+.sidebar svg {
+    font-size: 3rem; /* Makes icons larger */
+    padding: 1rem;
+    color: #ecf0f1; /* Light icon color */
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+/* Hover effect for icons */
+.sidebar svg:hover {
+    color: #3498db; /* Highlight color on hover */
+    transform: scale(1.1);
+}
+
+/* The main content area */
+.main-content {
+    flex-grow: 1; /* Takes up all remaining space */
+    padding: 40px;
+    overflow-y: auto; /* Adds scrollbar if content is too long */
+    /* REMOVED: width: 100% is not needed because flex-grow handles it */
+}
+
+/* Basic styling for your content lists */
+.main-content h1 {
+    color: #2c3e50;
+}
+
+.main-content input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    font-size: 16px;
+    box-sizing: border-box; /* Ensures padding doesn't affect the final width */
+}
+
+.main-content ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.main-content li {
+    background-color: #fff;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
