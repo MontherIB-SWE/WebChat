@@ -8,11 +8,13 @@
   margin: 0 auto;
   width: 90%;
   max-width: 450px;
-  height: 400px;
   border-radius: 20px;
   border: 1px solid #555;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
-
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
 }
 
 /* Targeting the generic div as in the original */

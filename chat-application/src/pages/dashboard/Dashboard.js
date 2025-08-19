@@ -1,8 +1,8 @@
 import './Dashboard.css';
 import { db, auth } from '../../firebase';
-import { collection, getDocs, doc, setDoc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, setDoc, updateDoc, query, where, addDoc, serverTimestamp, onSnapshot, orderBy } from 'firebase/firestore';
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { FaHome, FaUser, FaCog, FaPlus, FaSignOutAlt } from 'react-icons/fa';
 
 function Dashboard({ onLogout }) {
@@ -14,6 +14,9 @@ function Dashboard({ onLogout }) {
     const [newUsername, setNewUsername] = useState('');
     const [loading, setLoading] = useState(true);
     const [selectedFriend, setSelectedFriend] = useState(null);
+    const [messageText, setMessageText] = useState('');
+    const [messages, setMessages] = useState([]);
+    const messagesUnsubscribeRef = useRef([]);
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, user => {
@@ -41,6 +44,9 @@ function Dashboard({ onLogout }) {
         if (currentUser) {
             fetchUsers();
             fetchFriends();
+            // messages will be loaded by a real-time listener when a friend is selected
+            console.log('Current User:', currentUser);
+            console.log('Friends:', friends);
         }
     }, [currentUser]);
 
@@ -48,6 +54,50 @@ function Dashboard({ onLogout }) {
         const usersSnapshot = await getDocs(collection(db, 'users'));
         const usersData = usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         setUsers(usersData);
+    };
+
+    const fetchConversationMessages = async (friend) => {
+        const friendToUse = friend || selectedFriend;
+        if (!currentUser || !friendToUse) return;
+
+        try {
+            // q1: messages currentUser -> friend
+            const q1 = query(collection(db, 'messages'), where('senderId', '==', currentUser.id), where('receiverId', '==', friendToUse.id));
+            // q2: messages friend -> currentUser
+            const q2 = query(collection(db, 'messages'), where('senderId', '==', friendToUse.id), where('receiverId', '==', currentUser.id));
+            // q3: fallback for documents that use participants array
+            const q3 = query(collection(db, 'messages'), where('participants', 'array-contains', currentUser.id));
+
+            const [snap1, snap2, snap3] = await Promise.all([getDocs(q1), getDocs(q2), getDocs(q3)]);
+
+            const map = new Map();
+
+            const pushDoc = (d) => {
+                const data = d.data();
+                // determine timestamp (serverTimestamp fields need to be converted)
+                const ts = data.createdAt && data.createdAt.toMillis ? data.createdAt.toMillis() : (d.createTime ? d.createTime.toMillis() : 0);
+                const obj = { id: d.id, _ts: ts, ...data };
+
+                // filter to this conversation
+                if (Array.isArray(obj.participants)) {
+                    if (!obj.participants.includes(friendToUse.id)) return;
+                } else {
+                    if (!((obj.senderId === currentUser.id && obj.receiverId === friendToUse.id) || (obj.senderId === friendToUse.id && obj.receiverId === currentUser.id))) return;
+                }
+
+                map.set(d.id, obj);
+            };
+
+            snap1.docs.forEach(pushDoc);
+            snap2.docs.forEach(pushDoc);
+            snap3.docs.forEach(pushDoc);
+
+            const arr = Array.from(map.values()).sort((a, b) => (a._ts || 0) - (b._ts || 0));
+            setMessages(arr);
+        } catch (err) {
+            console.error('Error fetching conversation messages:', err);
+            setMessages([]);
+        }
     };
 
     const fetchFriends = async () => {
@@ -75,6 +125,65 @@ function Dashboard({ onLogout }) {
         setFriends(friendsData);
     };
 
+    const sendMessage = async (friend) => {
+        if (!currentUser || !friend) {
+            alert('Error: Missing user or friend.');
+            return;
+        }
+
+        if (!messageText || !messageText.trim()) {
+            alert('Please enter a message before sending.');
+            return;
+        }
+
+        try {
+            await addDoc(collection(db, 'messages'), {
+                senderId: currentUser.id,
+                receiverId: friend.id,
+                participants: [currentUser.id, friend.id],
+                text: messageText.trim(),
+                createdAt: serverTimestamp()
+            });
+
+            setMessageText('');
+            // TODO: refresh messages list if implemented
+        } catch (error) {
+            console.error('Error sending message: ', error);
+            alert('Failed to send message. Please try again.');
+        }
+    }
+
+    // Real-time listener for messages of the selected conversation
+    useEffect(() => {
+        // cleanup any existing listeners
+        if (Array.isArray(messagesUnsubscribeRef.current) && messagesUnsubscribeRef.current.length) {
+            messagesUnsubscribeRef.current.forEach(fn => { try { fn(); } catch (e) { /* ignore */ } });
+            messagesUnsubscribeRef.current = [];
+        }
+
+        if (!currentUser || !selectedFriend) {
+            setMessages([]);
+            return;
+        }
+
+        // create three listeners and call the unified fetch when any change occurs
+        const q1 = query(collection(db, 'messages'), where('senderId', '==', currentUser.id), where('receiverId', '==', selectedFriend.id));
+        const q2 = query(collection(db, 'messages'), where('senderId', '==', selectedFriend.id), where('receiverId', '==', currentUser.id));
+        const q3 = query(collection(db, 'messages'), where('participants', 'array-contains', currentUser.id));
+
+        const u1 = onSnapshot(q1, () => { fetchConversationMessages(selectedFriend); }, (err) => console.error('messages listener q1 error', err));
+        const u2 = onSnapshot(q2, () => { fetchConversationMessages(selectedFriend); }, (err) => console.error('messages listener q2 error', err));
+        const u3 = onSnapshot(q3, () => { fetchConversationMessages(selectedFriend); }, (err) => console.error('messages listener q3 error', err));
+
+        messagesUnsubscribeRef.current = [u1, u2, u3];
+
+        return () => {
+            if (Array.isArray(messagesUnsubscribeRef.current)) {
+                messagesUnsubscribeRef.current.forEach(fn => { try { fn(); } catch (e) { /* ignore */ } });
+                messagesUnsubscribeRef.current = [];
+            }
+        };
+    }, [currentUser, selectedFriend]);
     const addFriend = async (friendToAdd) => {
         if (!currentUser) return;
 
@@ -144,10 +253,9 @@ function Dashboard({ onLogout }) {
                     <FaHome onClick={() => setView('home')} />
                     <FaUser onClick={() => setView('addF')} />
                     <FaCog onClick={() => setView('settings')} />
-                </div>
-                <div>
                     <FaSignOutAlt onClick={handleLogout} className="logout-icon" />
                 </div>
+              
             </nav>
 
             <main className="main-content">
@@ -160,7 +268,7 @@ function Dashboard({ onLogout }) {
                                     <li
                                         key={friend.id}
                                         className={`friend-item ${selectedFriend?.id === friend.id ? 'selected' : ''}`}
-                                        onClick={() => setSelectedFriend(friend)}
+                                        onClick={() => { setSelectedFriend(friend); fetchConversationMessages(friend); }}
                                     >
                                         {friend.username}
                                     </li>
@@ -170,8 +278,30 @@ function Dashboard({ onLogout }) {
                         <div className="chat-window-panel">
                             {selectedFriend ? (
                                 <div>
-                                    <h3>Chat with {selectedFriend.username}</h3>
-                                    {/* Chat messages and input will go here */}
+                                    <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+                                        <h3>Chat with {selectedFriend.username}</h3>
+                                        <button onClick={() => fetchConversationMessages()} style={{padding:'6px 10px'}}>Refresh</button>
+                                    </div>
+                                    <ul className="message-list">
+                                        {messages.map((message) => (
+                                            <li
+                                                key={message.id}
+                                                className={`message-item ${message.senderId === currentUser.id ? 'sent' : 'received'}`}
+                                            >
+                                                {message.text}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className='message-write'>
+                                        <input
+                                            type='text'
+                                            value={messageText}
+                                            onChange={(e) => setMessageText(e.target.value)}
+                                            placeholder={`Message ${selectedFriend.username}...`}
+                                        />
+                                        <button onClick={() => sendMessage(selectedFriend)}>Send</button>
+                                    </div>
+
                                 </div>
                             ) : (
                                 <div className="no-chat-selected">
