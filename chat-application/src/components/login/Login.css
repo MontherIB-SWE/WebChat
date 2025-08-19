@@ -5,7 +5,7 @@
   gap: 1.5rem;
   background-color: #2c2c2c;
   padding: 2.5rem;
-  margin: 20px;
+  margin: 0 auto;
   width: 90%;
   max-width: 450px;
   height: 400px;
@@ -17,6 +17,7 @@
 
 /* Targeting the generic div as in the original */
 .Container div {
+  margin: 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
@@ -31,6 +32,9 @@
 .Container div label {
   font-weight: bold;
   font-size: 0.9rem;
+}
+.Container label{
+  margin: 0.5rem;
 }
 
 .Container span{
@@ -71,6 +75,7 @@
   font-weight: bold;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.1s ease;
+  margin: 0.5rem;
 }
 
 /* Interactive states for the button */
