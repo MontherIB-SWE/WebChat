@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import './App.css';
-import Login from './components/login/Login.js';
+import Login from './components/login/login.js';
 import Register from './components/register/Register.js';
 import Dashboard from './pages/dashboard/Dashboard.js'; 
 import { auth } from './firebase';

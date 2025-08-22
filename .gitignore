@@ -1,0 +1,42 @@
+
+# Node / JavaScript common ignores
+# Ignore node_modules everywhere
+node_modules/
+**/node_modules/
+
+# Optional npm cache folders
+.npm
+.npmrc
+
+# Yarn
+.yarn/
+.yarn/*
+.yarnrc
+.yarnrc.yml
+.yarnclean
+
+# pnpm
+.pnpm-store/
+.pnpm-debug.log
+
+# lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# build outputs
+/build
+/dist
+
+# local env files
+.env
+.env.*.local
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
