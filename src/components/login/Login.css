@@ -3,14 +3,14 @@
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  background-color: #2c2c2c;
+  background-color: var(--bg-secondary);
   padding: 2.5rem;
   margin: 0 auto;
   width: 90%;
   max-width: 450px;
   border-radius: 20px;
-  border: 1px solid #555;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px var(--shadow);
   position: fixed;
   top: 50%;
   left: 50%;
@@ -26,7 +26,7 @@
 }
 
 .Container h2 {
-  color: #ffffff;
+  color: var(--text-primary);
   text-align: center;
   margin: 0;
 }
@@ -34,23 +34,31 @@
 .Container div label {
   font-weight: bold;
   font-size: 0.9rem;
+  color: var(--text-primary);
 }
+
 .Container label{
   margin: 0.5rem;
+  color: var(--text-primary);
 }
 
 .Container span{
-  color: #006aff;
+  color: var(--accent);
   cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.Container span:hover {
+  color: var(--accent-hover);
 }
 
 /* Consolidated and improved input styles */
 .Container input[type="email"],
 .Container input[type="text"],
 .Container input[type="password"] {
-  background-color: #ffffff;
-  color: #000000;
-  border: 2px solid transparent;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 2px solid var(--border);
   border-radius: 8px;
   padding: 0.8rem 1rem;
   font-size: 1rem;
@@ -62,13 +70,13 @@
 /* Interactive focus state for inputs */
 .Container input:focus-visible {
   outline: none;
-  border-color: #4CAF50;
+  border-color: var(--success);
   box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
 }
 
 /* Button styles */
 .Container button {
-  background-color: #4CAF50;
+  background-color: var(--success);
   color: white;
   border: none;
   border-radius: 8px;
@@ -82,7 +90,7 @@
 
 /* Interactive states for the button */
 .Container button:hover {
-  background-color: #45a049;
+  background-color: var(--success-hover);
 }
 
 .Container button:active {

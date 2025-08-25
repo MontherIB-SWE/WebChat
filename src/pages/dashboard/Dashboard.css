@@ -3,16 +3,15 @@
     display: flex;
     height: 100vh; /* Full screen height */
     width: 100%;   /* FIX: Changed from 100vh to 100% to fill screen width */
-    background-color: #f4f7f6;
+    background-color: var(--bg-primary);
     font-family: sans-serif;
-    color: black;
-
+    color: var(--text-primary);
 }
 
 /* The sidebar navigation */
 .sidebar {
     width: 80px; /* Width of the sidebar */
-    background-color: #2c3e50; /* Dark sidebar color */
+    background-color: var(--bg-tertiary); /* Dark sidebar color */
     display: flex;
     flex-direction: column; /* Stack icons vertically */
     align-items: center; /* Center icons horizontally */
@@ -24,15 +23,16 @@
 .sidebar svg {
     font-size: 2rem; /* Makes icons larger */
     padding: 1rem;
-    color: #ecf0f1; /* Light icon color */
+    color: var(--text-secondary); /* Light icon color */
     cursor: pointer;
     transition: all 0.2s ease-in-out;
 }
 
 .sidebar svg:hover {
-    color: #3498db; 
+    color: var(--accent); 
     transform: scale(1.1);
 }
+
 .sidebar div {
     flex-shrink: 0;
     display: flex;
@@ -44,21 +44,24 @@
     flex-grow: 1; /* Takes up all remaining space */
     padding: 20px;
     overflow-y: auto; /* Adds scrollbar if content is too long */
+    background-color: var(--bg-primary);
 }
 
 /* Basic styling for your content lists */
 .main-content h1 {
-    color: #2c3e50;
+    color: var(--text-primary);
 }
 
 .main-content input {
     width: 100%;
     padding: 10px;
     margin-bottom: 20px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--border);
     border-radius: 5px;
     font-size: 16px;
     box-sizing: border-box; /* Ensures padding doesn't affect the final width */
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
 }
 
 .main-content ul {
@@ -67,32 +70,38 @@
 }
 
 .main-content li {
-    background-color: #fff;
+    background-color: var(--bg-secondary);
     padding: 15px;
     margin-bottom: 10px;
     border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 4px var(--shadow);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
 }
+
 .chat-container {
     display: flex;
     flex-direction: row;
-    background-color: #f4f7f6;
+    background-color: var(--bg-primary);
     font-family: sans-serif;
-    color: black;
+    color: var(--text-primary);
     gap: 3rem;
 }
+
 .chat-window-panel{
     width: 70%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
+
 .friend-list-panel{
     width: 30%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
+
 .message-write{
     display: flex;
     flex-direction: row;
@@ -100,12 +109,32 @@
     justify-content: space-between;
     gap: 1rem;
 }
+
 .message-write input, .message-write button{
     margin: 0;
     vertical-align: middle;
 }
+
+.message-write input {
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.8rem 1rem;
+    font-size: 1rem;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.message-write input:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
 .message-write button{
-    background-color: #4CAF50;
+    background-color: var(--success);
     color: white;
     border: none;
     border-radius: 8px;
@@ -116,6 +145,7 @@
     transition: background-color 0.2s ease, transform 0.1s ease;
     margin: 0.5rem;
 }
+
 .message-write button:hover {
-    background-color: #45a049;
+    background-color: var(--success-hover);
 }
