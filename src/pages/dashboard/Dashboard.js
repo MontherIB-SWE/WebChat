@@ -250,12 +250,20 @@ function Dashboard({ onLogout }) {
         <div className="dashboard-container">
             <nav className="sidebar">
                 <div>
-                    <FaHome onClick={() => setView('home')} />
-                    <FaUser onClick={() => setView('addF')} />
-                    <FaCog onClick={() => setView('settings')} />
+                    <FaHome 
+                        onClick={() => setView('home')} 
+                        className={view === 'home' ? 'active' : ''}
+                    />
+                    <FaUser 
+                        onClick={() => setView('addF')} 
+                        className={view === 'addF' ? 'active' : ''}
+                    />
+                    <FaCog 
+                        onClick={() => setView('settings')} 
+                        className={view === 'settings' ? 'active' : ''}
+                    />
                     <FaSignOutAlt onClick={handleLogout} className="logout-icon" />
                 </div>
-              
             </nav>
 
             <main className="main-content">
