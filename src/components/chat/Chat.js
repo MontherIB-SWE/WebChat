@@ -11,7 +11,49 @@ import { FaCircle } from 'react-icons/fa';
 const adjectives = ["Happy", "Cool", "Smart", "Purple", "Golden", "Silver", "Blue", "Red", "Green", "Pink", "Sunny", "Bright", "Swift", "Bold", "Gentle", "Mighty", "Cosmic", "Neon", "Crystal", "Electric"];
 const nouns = ["Panda", "Cat", "Fox", "Dragon", "Eagle", "Wolf", "Butterfly", "Tiger", "Dolphin", "Phoenix", "Unicorn", "Koala", "Penguin", "Owl", "Hawk", "Bear", "Rabbit", "Lion", "Shark", "Falcon"];
 
-// User color palette
+// Color name mapping
+const colorMap = {
+    "purple": "#9333ea",
+    "golden": "#f59e0b",
+    "gold": "#f59e0b",
+    "silver": "#9ca3af",
+    "blue": "#3b82f6",
+    "red": "#ef4444",
+    "green": "#10b981",
+    "pink": "#ec4899",
+    "sunny": "#fbbf24",
+    "bright": "#facc15",
+    "cosmic": "#8b5cf6",
+    "neon": "#06b6d4",
+    "crystal": "#a855f7",
+    "electric": "#0ea5e9",
+    "orange": "#f97316",
+    "yellow": "#eab308",
+    "teal": "#14b8a6",
+    "cyan": "#06b6d4",
+    "indigo": "#6366f1",
+    "violet": "#8b5cf6",
+    "rose": "#f43f5e",
+    "lime": "#84cc16",
+    "emerald": "#10b981",
+    "sky": "#0ea5e9",
+    "amber": "#f59e0b",
+    "fuchsia": "#d946ef",
+    "magenta": "#e91e63",
+    "mint": "#6ee7b7",
+    "coral": "#ff7f7f",
+    "navy": "#1e3a8a",
+    "maroon": "#881337",
+    "olive": "#84cc16",
+    "turquoise": "#2dd4bf",
+    "lavender": "#c084fc",
+    "crimson": "#dc2626",
+    "azure": "#3b82f6",
+    "scarlet": "#ef4444",
+    "jade": "#059669"
+};
+
+// User color palette (fallback)
 const userColors = [
     "#FF6B6B", "#4ECDC4", "#45B7D1", "#96CEB4", "#FFEAA7", 
     "#DFE6E9", "#74B9FF", "#A29BFE", "#FD79A8", "#FDCB6E",
@@ -37,7 +79,7 @@ function Chat() {
     const [messageText, setMessageText] = useState('');
     const [username, setUsername] = useState('');
     const [userColor, setUserColor] = useState('');
-    const [onlineUsers, setOnlineUsers] = useState(new Map());
+    const [activeUsers, setActiveUsers] = useState(new Map());
     const [sendingMessage, setSendingMessage] = useState(false);
     const [showPoll, setShowPoll] = useState(false);
     const [pollQuestion, setPollQuestion] = useState('');
@@ -46,6 +88,8 @@ function Chat() {
     const [showIcebreaker, setShowIcebreaker] = useState(false);
     const [currentIcebreaker, setCurrentIcebreaker] = useState('');
     const [showCelebration, setShowCelebration] = useState(false);
+    const [showMobileUsers, setShowMobileUsers] = useState(false);
+    const [isClosingDrawer, setIsClosingDrawer] = useState(false);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const notificationSound = useRef(null);
@@ -57,13 +101,67 @@ function Chat() {
         return `${adj}${noun}`;
     };
 
-    // Get user color (consistent per username)
+    // Get user color based on color name in username
     const getUserColor = (username) => {
+        if (!username) return userColors[0];
+        
+        // Check if username contains a color name
+        const lowerUsername = username.toLowerCase();
+        for (const [colorName, colorValue] of Object.entries(colorMap)) {
+            if (lowerUsername.includes(colorName)) {
+                return colorValue;
+            }
+        }
+        
+        // Fallback to hash-based color if no color name found
         let hash = 0;
         for (let i = 0; i < username.length; i++) {
             hash = username.charCodeAt(i) + ((hash << 5) - hash);
         }
         return userColors[Math.abs(hash) % userColors.length];
+    };
+
+    // Calculate luminance to determine if color is light or dark
+    const getLuminance = (hexColor) => {
+        const rgb = parseInt(hexColor.slice(1), 16);
+        const r = (rgb >> 16) & 0xff;
+        const g = (rgb >> 8) & 0xff;
+        const b = (rgb >> 0) & 0xff;
+        
+        // Calculate relative luminance
+        const [rs, gs, bs] = [r, g, b].map(c => {
+            c = c / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        });
+        
+        return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+    };
+
+    // Get styling for username display based on color brightness
+    const getUsernameStyle = (color, isOwnMessage = false) => {
+        const luminance = getLuminance(color);
+        
+        // For own messages (green gradient background), always use white text
+        if (isOwnMessage) {
+            return {
+                color: 'rgba(255, 255, 255, 0.95)',
+                className: ''
+            };
+        }
+        
+        // For light/bright colors, use dark background badge
+        if (luminance > 0.5) {
+            return {
+                color: color,
+                className: 'username-bright'
+            };
+        }
+        
+        // For dark colors, use normal styling
+        return {
+            color: color,
+            className: ''
+        };
     };
 
     // Play notification sound
@@ -139,7 +237,7 @@ function Chat() {
                 }
             }
             
-            // Celebration mode when many users online
+            // Celebration mode when many users active
             if (users.size >= 10 && !showCelebration) {
                 setShowCelebration(true);
                 setTimeout(() => setShowCelebration(false), 5000);
@@ -148,7 +246,7 @@ function Chat() {
             // Replace all messages with real messages from database
             setMessages(messagesData);
             
-            setOnlineUsers(users);
+            setActiveUsers(users);
         });
 
         return () => {
@@ -239,7 +337,6 @@ function Chat() {
             id: 'temp-' + Date.now(),
             text: messageToSend,
             username: username,
-            userColor: userColor,
             createdAt: new Date(),
             isTemporary: true
         };
@@ -251,7 +348,6 @@ function Chat() {
             await addDoc(collection(db, 'global_messages'), {
                 text: messageToSend,
                 username: username,
-                userColor: userColor,
                 createdAt: serverTimestamp(),
             });
         } catch (error) {
@@ -273,6 +369,14 @@ function Chat() {
         setUserColor(newColor);
     };
 
+    const handleCloseDrawer = () => {
+        setIsClosingDrawer(true);
+        setTimeout(() => {
+            setShowMobileUsers(false);
+            setIsClosingDrawer(false);
+        }, 300); // Match animation duration
+    };
+
     const formatTime = (timestamp) => {
         if (!timestamp) return '';
         const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
@@ -289,7 +393,7 @@ function Chat() {
                     <div className="confetti">✨</div>
                     <div className="confetti">🎈</div>
                     <div className="confetti">⭐</div>
-                    <div className="celebration-message">🎉 Party Mode! 10+ users online! 🎉</div>
+                    <div className="celebration-message">🎉 Party Mode! 10+ active users! 🎉</div>
                 </div>
             )}
 
@@ -303,63 +407,172 @@ function Chat() {
                 </div>
             )}
 
-            {/* Top Bar with Stats */}
-            <div className="online-users-bar">
-                <div className="top-bar-left">
-                    <div className="online-count">
-                        <span className="online-indicator"></span>
-                        <HiUsers className="icon-users" />
-                        {onlineUsers.size} online
-                    </div>
-                    <div className="stats-badge">
-                        <BiMessageDetail className="icon-chart" />
-                        {messages.length} messages
+            {/* Mobile Users Drawer */}
+            {showMobileUsers && (
+                <div className={`mobile-drawer-overlay ${isClosingDrawer ? 'closing' : ''}`} onClick={handleCloseDrawer}>
+                    <div className={`mobile-drawer ${isClosingDrawer ? 'closing' : ''}`} onClick={(e) => e.stopPropagation()}>
+                        <div className="drawer-header">
+                            <div className="drawer-title">
+                                <HiUsers className="drawer-icon" />
+                                <h3>Active Users ({activeUsers.size})</h3>
+                            </div>
+                            <button className="drawer-close" onClick={handleCloseDrawer}>
+                                ✕
+                            </button>
+                        </div>
+                        <div className="drawer-content">
+                            {Array.from(activeUsers.keys()).map((displayUsername) => {
+                                const baseColor = getUserColor(displayUsername);
+                                const usernameStyle = getUsernameStyle(baseColor, false);
+                                return (
+                                    <div 
+                                        key={displayUsername} 
+                                        className={`drawer-user-item ${displayUsername === username ? 'current-user' : ''}`}
+                                    >
+                                        <FaCircle 
+                                            className="drawer-user-indicator" 
+                                            style={{ color: baseColor }} 
+                                        />
+                                        <span 
+                                            className={`drawer-user-name ${usernameStyle.className}`}
+                                            style={{ 
+                                                color: usernameStyle.color,
+                                                fontWeight: 600 
+                                            }}
+                                        >
+                                            {displayUsername}
+                                        </span>
+                                        {displayUsername === username && (
+                                            <span className="you-badge">You</span>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
-                <div className="top-bar-center">
-                    <div className="user-list-compact">
-                        {Array.from(onlineUsers.keys()).slice(0, 5).map((displayUsername) => (
-                            <span 
-                                key={displayUsername} 
-                                className="user-badge"
-                                style={{ borderColor: getUserColor(displayUsername) }}
-                            >
-                                {displayUsername}
-                            </span>
-                        ))}
-                        {onlineUsers.size > 5 && (
-                            <span className="user-badge more">+{onlineUsers.size - 5}</span>
-                        )}
+            )}
+
+            {/* Enhanced Top Bar */}
+            <div className="top-bar">
+                <div className="top-bar-content">
+                    {/* Left: Branding */}
+                    <div className="top-bar-brand">
+                        <div className="brand-logo">💬</div>
+                        <div className="brand-info">
+                            <h1 className="brand-title">WebChat</h1>
+                            <p className="brand-subtitle">Global Room</p>
+                        </div>
                     </div>
-                </div>
-                <div className="top-bar-right">
-                    <button className="username-badge" onClick={changeUsername} title="Change username">
-                        <FaCircle className="icon-user" style={{ color: userColor }} />
-                        <span style={{ color: userColor }}>{username}</span>
-                        <IoReload className="change-icon" />
-                    </button>
+                    
+                    {/* Center: Stats */}
+                    <div className="top-bar-stats" onClick={() => setShowMobileUsers(true)}>
+                        <div className="stat-item active-stat">
+                            <span className="active-indicator"></span>
+                            <HiUsers className="stat-icon" />
+                            <div className="stat-info">
+                                <span className="stat-value">{activeUsers.size}</span>
+                                <span className="stat-label">Active</span>
+                            </div>
+                        </div>
+                        <div className="stat-divider"></div>
+                        <div className="stat-item messages-stat">
+                            <BiMessageDetail className="stat-icon" />
+                            <div className="stat-info">
+                                <span className="stat-value">{messages.length}</span>
+                                <span className="stat-label">Messages</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {/* Right: User Profile */}
+                    <div className="top-bar-user">
+                        <button className="user-profile-btn" onClick={changeUsername} title="Click to change username">
+                            <div className="profile-avatar" style={{ 
+                                background: `linear-gradient(135deg, ${userColor}, ${userColor}dd)`
+                            }}>
+                                <FaCircle className="avatar-icon" />
+                            </div>
+                            <div className="profile-info">
+                                <span className="profile-label">You are</span>
+                                <span 
+                                    className={`profile-name ${getUsernameStyle(userColor, false).className}`}
+                                    style={{ 
+                                        color: getUsernameStyle(userColor, false).color,
+                                        fontWeight: 600 
+                                    }}
+                                >{username}</span>
+                            </div>
+                            <IoReload className="profile-change-icon" />
+                        </button>
+                    </div>
                 </div>
             </div>
             
-            <div className="message-list">
+            {/* Main Content Area with Sidebar */}
+            <div className="chat-content">
+                {/* Sidebar with Active Users */}
+                <div className="sidebar">
+                    <div className="sidebar-header">
+                        <HiUsers className="sidebar-icon" />
+                        <h3>Active Users ({activeUsers.size})</h3>
+                    </div>
+                    <div className="user-list">
+                        {Array.from(activeUsers.keys()).map((displayUsername) => {
+                            const baseColor = getUserColor(displayUsername);
+                            const usernameStyle = getUsernameStyle(baseColor, false);
+                            return (
+                                <div 
+                                    key={displayUsername} 
+                                    className={`user-item ${displayUsername === username ? 'current-user' : ''}`}
+                                >
+                                    <FaCircle 
+                                        className="user-indicator" 
+                                        style={{ color: baseColor }} 
+                                    />
+                                    <span 
+                                        className={`user-name ${usernameStyle.className}`}
+                                        style={{ 
+                                            color: usernameStyle.color,
+                                            fontWeight: 600 
+                                        }}
+                                    >
+                                        {displayUsername}
+                                    </span>
+                                    {displayUsername === username && (
+                                        <span className="you-badge">You</span>
+                                    )}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className="message-list">
                 {messages.map((msg, index) => {
-                    const msgColor = msg.userColor || getUserColor(msg.username);
+                    // Always calculate color from username (ignore stored userColor)
+                    const msgColor = getUserColor(msg.username);
+                    const isOwn = msg.username === username;
+                    const usernameStyle = getUsernameStyle(msgColor, isOwn);
                     
                     return (
                         <div 
                             key={msg.id} 
-                            className={`message ${msg.username === username ? 'own-message' : ''} ${msg.isTemporary ? 'sending' : ''} ${msg.isCommand ? 'command-message' : ''}`}
+                            className={`message ${isOwn ? 'own-message' : ''} ${msg.isTemporary ? 'sending' : ''} ${msg.isCommand ? 'command-message' : ''}`}
                         >
                             <div className="message-content">
                                 <div className="message-header">
-                                    <span className="username" style={{ color: msgColor }}>
+                                    <span className={`username ${usernameStyle.className}`} style={{ 
+                                        color: usernameStyle.color,
+                                        fontWeight: 600
+                                    }}>
                                         {msg.username}
                                     </span>
                                     <span className="timestamp">{formatTime(msg.createdAt)}</span>
                                     {msg.isTemporary && <IoReload className="sending-indicator" />}
                                 </div>
                                 <div className="message-text" style={{ 
-                                    borderLeftColor: msg.username === username ? userColor : msgColor 
+                                    borderLeftColor: msgColor 
                                 }}>
                                     {msg.isCommand && <span className="command-emoji">{msg.emoji}</span>}
                                     {msg.text}
@@ -403,6 +616,7 @@ function Chat() {
                     );
                 })}
                 <div ref={messagesEndRef} />
+                </div>
             </div>
             
             {/* Quick Commands Bar */}

@@ -7,14 +7,14 @@ import { getFirestore } from "firebase/firestore";
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAfIXmgq8FAXC4nQeErSCkEqn7vBbFCh_E",
-  authDomain: "webchat-1185b.firebaseapp.com",
-  databaseURL: "https://webchat-1185b-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "webchat-1185b",
-  storageBucket: "webchat-1185b.firebasestorage.app",
-  messagingSenderId: "278191013540",
-  appId: "1:278191013540:web:124f7fd4803ad2208e3031",
-  measurementId: "G-J3YX8ETG88"
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  databaseURL: process.env.REACT_APP_FIREBASE_DATABASE_URL,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
 };
 
 // Initialize Firebase
