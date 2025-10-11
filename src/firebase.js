@@ -1,9 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+// Firebase auth removed - not used in this global chat app
 import { getFirestore } from "firebase/firestore";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Using Firestore for real-time chat messages
 
 // Your web app's Firebase configuration
 // For Firebase JS SDK v7.20.0 and later, measurementId is optional
@@ -20,11 +19,5 @@ const firebaseConfig = {
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-export const auth = getAuth(app);
-// Ensure auth state is persisted across page refreshes
-setPersistence(auth, browserLocalPersistence).catch((err) => {
-  // non-fatal: log and continue (defaults will apply)
-  // Commonly fails in SSR or restricted environments
-  // console.warn('Failed to set auth persistence', err);
-});
+// Auth removed - this is a simple global chat without user authentication
 export const db = getFirestore(app);
