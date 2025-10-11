@@ -90,6 +90,7 @@ function Chat() {
     const [showCelebration, setShowCelebration] = useState(false);
     const [showMobileUsers, setShowMobileUsers] = useState(false);
     const [isClosingDrawer, setIsClosingDrawer] = useState(false);
+    const [isEntering, setIsEntering] = useState(true);
     const messagesEndRef = useRef(null);
     const inputRef = useRef(null);
     const notificationSound = useRef(null);
@@ -200,6 +201,11 @@ function Chat() {
         
         setUsername(storedUsername);
         setUserColor(storedColor);
+
+        // Entrance animation
+        setTimeout(() => {
+            setIsEntering(false);
+        }, 3000);
 
         // Show random icebreaker every 5 minutes
         const icebreakerInterval = setInterval(() => {
@@ -384,7 +390,7 @@ function Chat() {
     };
 
     return (
-        <div className="chat-container">
+        <div className={`chat-container ${isEntering ? 'entering' : ''}`}>
             {/* Celebration Effect */}
             {showCelebration && (
                 <div className="celebration-overlay">
@@ -619,31 +625,51 @@ function Chat() {
                 </div>
             </div>
             
-            {/* Quick Commands Bar */}
-            <div className="quick-commands">
-                <button onClick={() => setMessageText('/wave')} title="Wave hello">👋</button>
-                <button onClick={() => setMessageText('/dance')} title="Dance">💃</button>
-                <button onClick={() => setMessageText('/laugh')} title="Laugh">😂</button>
-                <button onClick={() => setMessageText('/celebrate')} title="Celebrate">🎉</button>
-                <button onClick={() => setMessageText('/love')} title="Send love">❤️</button>
-                <button onClick={() => setMessageText('/coffee')} title="Coffee time">☕</button>
-                <button onClick={() => setMessageText('/pizza')} title="Pizza!">🍕</button>
-                <button onClick={() => setMessageText('/thumbsup')} title="Thumbs up">👍</button>
+            {/* Message Input Section - Animates Together */}
+            <div className="message-input-section">
+                {/* Quick Reactions Bar - Sticks to Message Form */}
+                <div className="quick-reactions-bar">
+                    <div className="quick-reactions-content">
+                        <span className="quick-reactions-label">Quick:</span>
+                        {['👍', '❤️', '😂', '😮', '🎉', '🔥', '✨', '💯'].map((emoji) => (
+                            <button
+                                key={emoji}
+                                className="quick-reaction-btn"
+                                onClick={() => setMessageText(messageText + emoji)}
+                                title={`Add ${emoji}`}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Quick Commands Bar */}
+                <div className="quick-commands">
+                    <button onClick={() => setMessageText('/wave')} title="Wave hello">👋</button>
+                    <button onClick={() => setMessageText('/dance')} title="Dance">💃</button>
+                    <button onClick={() => setMessageText('/laugh')} title="Laugh">😂</button>
+                    <button onClick={() => setMessageText('/celebrate')} title="Celebrate">🎉</button>
+                    <button onClick={() => setMessageText('/love')} title="Send love">❤️</button>
+                    <button onClick={() => setMessageText('/coffee')} title="Coffee time">☕</button>
+                    <button onClick={() => setMessageText('/pizza')} title="Pizza!">🍕</button>
+                    <button onClick={() => setMessageText('/thumbsup')} title="Thumbs up">👍</button>
+                </div>
+
+                <form onSubmit={handleSendMessage} className="message-form">
+                    <input
+                        ref={inputRef}
+                        type="text"
+                        value={messageText}
+                        onChange={(e) => setMessageText(e.target.value)}
+                        placeholder="Type a message or /command..."
+                        disabled={sendingMessage}
+                    />
+                    <button type="submit" disabled={sendingMessage || !messageText.trim()}>
+                        {sendingMessage ? <IoReload className="icon-sending" /> : <IoSend className="icon-send" />}
+                    </button>
+                </form>
             </div>
-            
-            <form onSubmit={handleSendMessage} className="message-form">
-                <input
-                    ref={inputRef}
-                    type="text"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder="Type a message or /command..."
-                    disabled={sendingMessage}
-                />
-                <button type="submit" disabled={sendingMessage || !messageText.trim()}>
-                    {sendingMessage ? <IoReload className="icon-sending" /> : <IoSend className="icon-send" />}
-                </button>
-            </form>
         </div>
     );
 }
