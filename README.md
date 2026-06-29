@@ -1,4 +1,3 @@
-<!-- Paste into WebChat/README.md. Add a screenshot/GIF and a live link if you deploy it. -->
 
 # 💬 WebChat
 
