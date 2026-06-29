@@ -7,6 +7,7 @@ A real-time chat application built with **React** and **Firebase**, featuring sl
 
 <!-- 👇 A short screen-recording GIF of sending a message + a reaction sells this instantly. -->
 <!-- ![Demo](docs/demo.gif) -->
+<img width="1920" height="1009" alt="webchat" src="https://github.com/user-attachments/assets/f158ec9a-0558-4dfd-80f6-ce026d5b084d" />
 
 ## ✨ Features
 - ⚡ Real-time messaging — messages sync live across all clients via Firestore (`onSnapshot`)
