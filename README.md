@@ -28,7 +28,6 @@ npm start            # add your Firebase config to a .env file
 **Live demo:** https://webchat-1185b.web.app
 
 ## 📚 What I learned
-[1–2 lines: e.g. real-time data sync with Firestore, handling auth, building a responsive chat UI.]
-
+Building a genuinely real-time UI with Firestore's onSnapshot listeners, so every client stays in sync without polling or page refreshes. I also designed a frictionless, no-login "global room" flow, modeled message reactions and slash-command actions as Firestore documents, and learned to deploy and host a single-page React app on Firebase Hosting.
 ---
 Built by [Monther Ibrahem](https://montherib-swe.github.io/) · [LinkedIn](https://www.linkedin.com/in/mibrahem1)
